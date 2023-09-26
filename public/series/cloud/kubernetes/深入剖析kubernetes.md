@@ -200,7 +200,7 @@ Docker 会把这些增量联合挂载在一个统一的`挂载点`上（等价�
 
 >删除只读层的文件原理：实际上是在可读写层创建一个名为.wh.xxx的文件。这样，当这两个层被联合挂载之后，该文件就会被.wh.xxx遮挡起来，消失了。这个功能就是“ro+wh”的挂载方式，即只读+whiteout的含义。
 
-![aufs](../../reference/pic/aufs.webp)
+![aufs](/reference/pic/aufs.webp)
 
 `init层`是一个以“-init”结尾的层，夹在只读层和读写层之间。Init 层是 Docker 项目单独生成的一个内部层，专门用来存放 /etc/hosts、/etc/resolv.conf 等信息。
 
@@ -306,7 +306,7 @@ docker exec的进程将`共享`容器的namespace，即namespace的链接文件�
 
 其实，如果你了解 Linux 内核的话，就会明白，绑定挂载实际上是一个 `inode 替换`的过程。在 Linux 操作系统中，inode 可以理解为存放文件内容的“对象”，而 `dentry`，也叫目录项，就是访问这个 inode 所使用的“指针”。
 
-![](../../reference/pic/inode.webp)
+![](/reference/pic/inode.webp)
 正如上图所示，`mount --bind /home /test`，会将 /home 挂载到 /test 上。其实相当于将 /test 的 dentry，`重定向`到了 /home 的 inode。这样当我们修改 /test 目录时，实际修改的是 /home 目录的 inode。这也就是为何，一旦执行 umount 命令，/test 目录原先的内容就会恢复：因为修改真正发生在的，是 /home 目录里。
 
 这样，进程在容器里对这个 /test 目录进行的所有操作，都实际发生在宿主机的对应目录（比如，/home，或者 `/var/lib/docker/volumes/[VOLUME_ID]/_data`）里，而不会影响容器镜像的内容。
@@ -797,7 +797,7 @@ spec:
 而所有用户的`写请求`，则必须直接以 DNS 记录的方式访问到 MySQL 的主节点，也就是：“mysql-0.mysql“这条 DNS 记录。
 
 
-![](../../reference/pic/k8s-mysql.webp)
+![](/reference/pic/k8s-mysql.webp)
 
 ```yml
 # 注意mysql5.7的镜像可能存在hostname没有的问题
@@ -1288,7 +1288,7 @@ spec:
                 type: string
 ```
 
-![](../../reference/pic/apis.webp)
+![](/reference/pic/apis.webp)
 
 需要明确的是，对于 Kubernetes 里的核心 API 对象，比如：Pod、Node 等，是不需要 `Group` 的（即：它们的 Group 是“”）。所以，对于这些 API 对象来说，Kubernetes 会直接在 /api 这个层级进行下一步的匹配过程。
 
@@ -1468,7 +1468,7 @@ func main() {
 
 第三步：main 函数启动上述的 Informer，然后执行 controller.Run，启动自定义控制器。至此，main 函数就结束了。
 
-![](../../reference/pic/controller.webp)
+![](/reference/pic/controller.webp)
 
 这个控制器要做的第一件事，是从 Kubernetes 的 APIServer 里获取它所关心的对象，也就是我定义的 Network 对象。这个操作，依靠的是一个叫作 `Informer`（可以翻译为：通知器）的代码库完成的。Informer 与 API 对象是一一对应的，所以我传递给自定义控制器的，正是一个 Network 对象的 Informer（Network Informer）。
 
@@ -2286,7 +2286,7 @@ domount() {
 
 比如，跟 Kubernetes 内置的 NFS 插件类似，这个 NFS FlexVolume 插件，也不能支持 Dynamic Provisioning（即：为每个 PVC 自动创建 PV 和对应的 Volume）。除非你再为它编写一个专门的 External Provisioner。再比如，我的插件在执行 mount 操作的时候，可能会生成一些挂载信息。这些信息，在后面执行 unmount 操作的时候会被用到。可是，在上述 FlexVolume 的实现里，你没办法把这些信息保存在一个变量里，等到 unmount 的时候直接使用。这个原因也很容易理解：FlexVolume 每一次对插件可执行文件的调用，都是一次完全独立的操作。所以，我们只能把这些信息写在一个宿主机上的临时文件里，等到 unmount 的时候再去读取。
 
-![](../../reference/pic/vol.webp)
+![](/reference/pic/vol.webp)
 可以看到，在上述体系下，无论是 FlexVolume，还是 Kubernetes 内置的其他存储插件，它们实际上担任的`角色`，仅仅是 Volume 管理中的“Attach 阶段”和“Mount 阶段”的具体执行者。而像 `Dynamic Provisioning` 这样的功能，就不是存储插件的责任，而是 Kubernetes 本身存储管理功能的一部分。
 
 ### CSI
@@ -2295,7 +2295,7 @@ domount() {
 
 而这些管理动作，比如“Attach 阶段”和“Mount 阶段”的具体操作，实际上就是通过调用 CSI 插件来完成的。
 
-![](../../reference/pic/csi.webp)
+![](/reference/pic/csi.webp)
 
 **可以看到，这套存储插件体系多了三个独立的外部组件（`External Components`），即：Driver Registrar、External Provisioner 和 External Attacher，对应的正是从 Kubernetes 项目里面剥离出来的那部分`存储管理功能`**。需要注意的是，External Components 虽然是外部组件，但依然由 Kubernetes 社区来开发和维护。
 
@@ -2501,7 +2501,7 @@ etcdctl get /coreos.com/network/subnets/100.96.2.0-24
 
 所以说，flanneld 在收到 container-1 发给 container-2 的 IP 包之后，就会把这个 IP 包直接封装在一个 `UDP 包`里，然后发送给 Node 2。不难理解，这个 UDP 包的源地址，就是 flanneld 所在的 Node 1 的地址，而目的地址，则是 container-2 所在的宿主机 Node 2 的地址。
 当然，这个请求得以完成的原因是，每台宿主机上的 flanneld，都监听着一个 `8285 端口`，所以 flanneld 只要把 UDP 包发往 Node 2 的 8285 端口即可。通过这样一个普通的、宿主机之间的 UDP 通信，一个 UDP 包就从 Node 1 到达了 Node 2。而 Node 2 上监听 8285 端口的进程也是 flanneld，所以这时候，flanneld 就可以从这个 UDP 包里解析出封装在里面的、container-1 发来的原 IP 包。
-![](../../reference/pic/flannel1.webp)
+![](/reference/pic/flannel1.webp)
 需要注意的是，上述流程要正确工作还有一个重要的前提，那就是 `docker0 网桥的地址范围必须是 Flannel 为宿主机分配的子网`。这个很容易实现，以 Node 1 为例，你只需要给它上面的 Docker Daemon 启动时配置如下所示的 bip 参数即可：
 FLANNEL_SUBNET=100.96.1.1/24
 dockerd --bip=$FLANNEL_SUBNET ...
@@ -2517,7 +2517,7 @@ VXLAN 的覆盖网络的设计思想是：**在现有的三层网络之上，“
 vtep的地址是**容器子网网络地址**
 
 而 VTEP 设备的作用，其实跟前面的 flanneld 进程非常相似。只不过，它进行封装和解封装的对象，是`二层数据帧`（Ethernet frame）；而且这个工作的执行流程，全部是在`内核`里完成的（因为 VXLAN 本身就是 Linux 内核中的一个模块）。
-![](../../reference/pic/flannel2.webp)
+![](/reference/pic/flannel2.webp)
 
 可以看到，图中每台宿主机上名叫 flannel.1 的设备，就是 VXLAN 所需的 VTEP 设备，`它既有 IP 地址，也有 MAC 地址`。
 
@@ -2736,7 +2736,7 @@ $ ip link set vethb4963f3 master cni0
 
 其中的典型例子，莫过于 Flannel 的 host-gw 模式和 Calico 项目了。我们先来看一下 Flannel 的 host-gw 模式。
 
-![](../../reference/pic/flannel3.webp)
+![](/reference/pic/flannel3.webp)
 
 可以看到，host-gw 模式的工作原理，其实就是将每个 Flannel 子网（Flannel Subnet，比如：10.244.1.0/24）的“`下一跳`”，设置成了该子网对应的宿主机的 IP 地址。
 也就是说，这台“主机”（Host）会充当这条容器通信路径里的“`网关`”（Gateway）。这也正是“host-gw”的含义。
@@ -2770,7 +2770,7 @@ $ ip link set vethb4963f3 master cni0
 
 不过，**不同于 Flannel 通过 Etcd 和宿主机上的 flanneld 来维护路由信息的做法，Calico 项目使用了一个“重型武器”来自动地在整个集群中分发路由信息。这个“重型武器”，就是 BGP**。BGP 的全称是 Border Gateway Protocol，即：边界网关协议。它是一个 Linux 内核原生就支持的、专门用在大规模数据中心里维护不同的“自治系统”之间路由信息的、无中心的路由协议。
 
-![](../../reference/pic/bgp.webp)
+![](/reference/pic/bgp.webp)
 
 在使用了 BGP 之后，你可以认为，在每个`边界网关`上都会运行着一个小程序，它们会将各自的路由表信息，通过 TCP 传输给其他的边界网关。而其他边界网关上的这个小程序，则会对收到的这些数据进行分析，然后将需要的信息添加到自己的路由表里。这样，图 2 中 Router 2 的路由表里，就会自动出现 10.10.0.2 和 10.10.0.3 对应的路由规则了。
 
@@ -2785,7 +2785,7 @@ Calico 的 `CNI` 插件。这是 Calico 与 Kubernetes 对接的部分。我已�
 
 除了对路由信息的维护方式之外，Calico 项目与 Flannel 的 host-gw 模式的另一个不同之处，就是**它不会在宿主机上创建任何网桥设备**(flannel会有cni网桥)。
 
-![](../../reference/pic/calico.webp)
+![](/reference/pic/calico.webp)
 
 可以看到，Calico 的 CNI 插件会为每个容器设置一个 `Veth Pair` 设备，然后把其中的一端放置在宿主机上（它的名字以 `cali` 前缀开头）。
 此外，**由于 Calico 没有使用 CNI 的网桥模式，Calico 的 CNI 插件还需要在宿主机上为每个容器的 Veth Pair 设备配置一条路由规则，用于接收传入的 IP 包。**
@@ -2836,7 +2836,7 @@ Calico 的 `CNI` 插件。这是 Calico 与 Kubernetes 对接的部分。我已�
 
 ##### ipip
 
-![](../../reference/pic/calico_ipip.webp)
+![](/reference/pic/calico_ipip.webp)
 
 在 Calico 的 IPIP 模式下，Felix 进程在 Node 1 上添加的路由规则，会稍微不同，如下所示：
 `10.233.2.0/24 via 192.168.2.2 tunl0`
@@ -2989,7 +2989,7 @@ spec: podSelector: {}
 >kube-router 其实是一个简化版的 Calico，它也使用 BGP 来维护路由信息，但是使用 CNI bridge 插件负责跟 Kubernetes 进行交互。
 
 需要注意的是，在有网桥参与的情况下，上述 Netfilter 设置“检查点”的流程，实际上也会出现在链路层（二层），并且会跟我在上面讲述的网络层（三层）的流程有交互。这些链路层的“检查点”对应的操作界面叫作 **ebtables**。所以，准确地说，数据包在 Linux Netfilter 子系统里完整的流动过程，其实应该如下所示：
-![](../../reference/pic/netfilter.webp)
+![](/reference/pic/netfilter.webp)
 
 在本篇文章中，我主要和你分享了 Kubernetes 对 Pod 进行“隔离”的手段，即：NetworkPolicy。
 
@@ -3600,7 +3600,7 @@ http://localhost:8001/api/v1/nodes/<your-node-name>/status
 
 当然，在 Kubernetes 的 GPU 支持方案里，你并不需要真正去做上述关于 Extended Resource 的这些操作。在 Kubernetes 中，对所有硬件加速设备进行管理的功能，都是由一种叫作 `Device Plugin` 的插件来负责的。这其中，当然也就包括了对该硬件的 Extended Resource 进行汇报的逻辑。Kubernetes 的 Device Plugin 机制，我可以用如下所示的一幅示意图来和你解释清楚。
 
-![](../../reference/pic/deviceplugin.webp)
+![](/reference/pic/deviceplugin.webp)
 我们先从这幅示意图的右侧开始看起。
 
 首先，对于每一种硬件设备，都需要有它所对应的 Device Plugin 进行管理，这些 Device Plugin，都通过 gRPC 的方式，同 kubelet 连接起来。以 NVIDIA GPU 为例，它对应的插件叫作`NVIDIA GPU device plugin`。这个 Device Plugin 会通过一个叫作 `ListAndWatch` 的 API，定期向 kubelet 汇报该 Node 上 GPU 的列表。比如，在我们的例子里，一共有三个 GPU（GPU0、GPU1 和 GPU2）。这样，kubelet 在拿到这个列表之后，就可以直接在它向 APIServer 发送的心跳里，以 `Extended Resource` 的方式，加上这些 GPU 的数量，比如nvidia.com/gpu=3。所以说，用户在这里是不需要关心 GPU 信息向上的汇报流程的。
@@ -3627,7 +3627,7 @@ Device Plugin 、kubelet、调度器如何协同工作：
 
 ## kubelet cri
 
-![](../../reference/pic/kubelet.webp)
+![](/reference/pic/kubelet.webp)
 
 可以看到，kubelet 的工作核心，就是一个控制循环，即：SyncLoop（图中的大圆圈）。而驱动这个控制循环运行的事件，包括四种：Pod 更新事件；Pod 生命周期变化；kubelet 本身设置的执行周期；定时的清理事件。
 
@@ -3643,7 +3643,7 @@ Device Plugin 、kubelet、调度器如何协同工作：
 
 在这里需要注意的是，kubelet 调用下层容器运行时的执行过程，并不会直接调用 Docker 的 API，而是通过一组叫作 `CRI`（Container Runtime Interface，容器运行时接口）的 gRPC 接口来间接执行的。
 
-![](../../reference/pic/cri.webp)
+![](/reference/pic/cri.webp)
 
 可以看到，当 Kubernetes 通过编排能力创建了一个 Pod 之后，调度器会为这个 Pod 选择一个具体的节点来运行。这时候，kubelet 当然就会通过前面讲解过的 SyncLoop 来判断需要执行的具体操作，比如创建一个 Pod。那么此时，kubelet 实际上就会调用一个叫作 GenericRuntime 的通用组件来发起创建 Pod 的 CRI 请求。
 
@@ -3658,14 +3658,14 @@ Device Plugin 、kubelet、调度器如何协同工作：
 所以说，这里的 CRI shim，就是容器项目的维护者们自由发挥的“场地”了。而除了 dockershim 之外，其他容器运行时的 CRI shim，都是需要额外部署在宿主机上的。举个例子。CNCF 里的 **containerd** 项目，就可以提供一个典型的 `CRI shim` 的能力，即：将 Kubernetes 发出的 CRI 请求，转换成对 containerd 的调用，然后创建出 **runC** 容器。
 
 而 runC 项目，才是负责执行我们前面讲解过的设置容器 Namespace、Cgroups 和 chroot 等基础操作的组件。所以，这几层的组合关系，可以用如下所示的示意图来描述。
-![](../../reference/pic/containerd.webp)
+![](/reference/pic/containerd.webp)
 
 具体地说，我们可以把 **CRI 分为两组**：
 第一组，是 `RuntimeService`。它提供的接口，主要是跟容器相关的操作。比如，创建和启动容器、删除容器、执行 exec 命令等等。
 而第二组，则是 `ImageService`。它提供的接口，主要是容器镜像相关的操作，比如拉取镜像、删除镜像等等。
 
 比如，当我们执行 kubectl run 创建了一个名叫 foo 的、包括了 A、B 两个容器的 Pod 之后。这个 Pod 的信息最后来到 kubelet，kubelet 就会按照图中所示的顺序来调用 CRI 接口。
-![](../../reference/pic/cripod.webp)
+![](/reference/pic/cripod.webp)
 
 在这一部分，**CRI 设计的一个重要原则，就是确保这个接口本身，只关注容器，不关注 Pod**。
 
@@ -3688,7 +3688,7 @@ Device Plugin 、kubelet、调度器如何协同工作：
 除了上述对容器生命周期的实现之外，CRI shim 还有一个重要的工作，就是如何实现 exec、logs 等接口。这些接口跟前面的操作有一个很大的不同，就是这些 gRPC 接口调用期间，**kubelet 需要跟容器项目`维护一个长连接来传输数据`。这种 API，我们就称之为 `Streaming API`**。
 
 CRI shim 里对 Streaming API 的实现，依赖于一套独立的 `Streaming Server 机制`。这一部分原理，可以用如下所示的示意图来为你描述。
-![](../../reference/pic/streamingapi.webp)
+![](/reference/pic/streamingapi.webp)
 可以看到，当我们对一个容器执行 kubectl exec 命令的时候，这个请求首先交给 API Server，然后 API Server 就会调用 kubelet 的 Exec API。
 
 这时，kubelet 就会调用 CRI 的 Exec 接口，而负责响应这个接口的，自然就是具体的 CRI shim。但在这一步，CRI shim 并不会直接去调用后端的容器项目（比如 Docker ）来进行处理，而只会返回一个 URL 给 kubelet。
