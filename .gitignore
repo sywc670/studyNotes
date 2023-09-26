@@ -1,0 +1,7 @@
+deprecated/
+.vscode
+
+reference/*
+!reference/pic
+
+yaml/
