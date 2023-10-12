@@ -39,12 +39,20 @@
 
 1. new返回指针，而make返回值
 2. make只能用于slice、chan、map这几个类型，new用于创建值类型
-3. make会进行**初始化**（指slice的指针会指向实际内存分配区域），new不会，只会返回零值对象，如new([]string)返回指向零值slice的指针，其中**slice的指针为nil，len和cap为0**
+3. make会进行**初始化**（指slice的指针会指向实际内存分配区域），**如果make([]int, 0)，data指针会指向一个空数组`[0]int`，而不是nil，**new不会，只会返回零值对象，如new([]string)返回指向零值slice的指针，其中**slice的data指针为nil，len和cap为0，与var s []int声明类似**
 
 ```go
 ps := new([]string)
-*ps = append(*ps, "element") # 会进行初始化
+*ps = append(*ps, "element") # append的时候会进行初始化
 ```
+
+new 函数分配内存，make 函数初始化；
+
+new(T) ：为类型T分配一块内存，并返回指向这块内存地址的指针，它适用于值类型如数组和结构体；
+
+make(T) ：初始化内置的数据结构，返回一个类型为 T 的空值，它只适用于3种内建的引用类型：slice、map 和 channel；
+
+new 获取的是存储指定变量内存地址的一个变量，对于变量内部结构并不会执行相应的初始化操作
 
 ## hash与map
 
