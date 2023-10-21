@@ -30,8 +30,11 @@
 - [设置必选标志](#设置必选标志)
   - [非选项参数验证](#非选项参数验证)
   - [hook](#hook)
+- [gin](#gin)
 - [iam项目阅读代码心得](#iam项目阅读代码心得)
-  - [优雅关停](#优雅关停)
+  - [命令行程序框架](#命令行程序框架)
+  - [接口认证](#接口认证)
+    - [优雅关停](#优雅关停)
   - [sdk设计](#sdk设计)
 
 ## go 安装配置
@@ -961,6 +964,8 @@ var ip = pflag.IntP("flagname", "f", 1234, "help message")
 pflag.Lookup("flagname").NoOptDefVal = "4321"
 ```
 
+**如果没有设置`pflag.NoOptDefVal`，在选项后不设置值，会报错**
+
 Pflag 可以**弃用标志或者标志的简写**。弃用的标志或标志简写在帮助文本中会被隐藏，并在使用不推荐的标志或简写时打印正确的用法提示。例如，弃用名为 logmode 的标志，并告知用户应该使用哪个标志代替：
 ```go
 // deprecate a flag by specifying its name and a usage message
@@ -968,6 +973,8 @@ pflag.CommandLine.MarkDeprecated("logmode", "please use --log-mode instead")
 ```
 
 ## viper
+
+**这里需要注意，Viper 配置键不区分大小写。**
 
 ### 优先级
 
@@ -1083,6 +1090,39 @@ RangeArgs(min, max)：如果非选项参数的个数不在 min 和 max 之间，
 
 注意，父级的 PreRun 只会在父级命令运行时调用，子命令是不会调用的。
 
+## gin
+
+Gin 在绑定参数时，是通过结构体的 tag 来判断要绑定哪类参数到结构体中的。
+
+这里要注意，不同的 HTTP 参数有不同的结构体 tag。
+
+- 路径参数：uri。
+- 查询字符串参数：form。
+- 表单参数：form。
+- HTTP 头参数：header。
+- 消息体参数：会根据 Content-Type，自动选择使用 json 或者 xml，也可以调用 ShouldBindJSON 或者 ShouldBindXML 直接指定使用哪个 tag。
+
+>表单参数是在body里传输的，会标注Content-Type为表单
+
+Gin 提供的函数可以获取 5 个类别的 HTTP 参数。
+
+- 路径参数：ShouldBindUri、BindUri；
+- 查询字符串参数：ShouldBindQuery、BindQuery；
+- 表单参数：ShouldBind；
+- HTTP 头参数：ShouldBindHeader、BindHeader；
+- 消息体参数：ShouldBindJSON、BindJSON 等。
+
+这里要注意，Gin 并没有提供类似 ShouldBindForm、BindForm 这类函数来绑定表单参数，但我们可以通过 ShouldBind 来绑定表单参数。当 HTTP 方法为 GET 时，ShouldBind 只绑定 Query 类型的参数；当 HTTP 方法为 POST 时，会先检查 content-type 是否是 json 或者 xml，如果不是，则绑定 Form 类型的参数。
+
+所以，ShouldBind 可以绑定 Form 类型的参数，但前提是 HTTP 方法是 POST，并且 content-type 不是 application/json、application/xml。
+
+Gin 框架本身支持了一些中间件。
+
+- gin.Logger()：Logger 中间件会将日志写到 gin.DefaultWriter，gin.DefaultWriter 默认为 os.Stdout。
+- gin.Recovery()：Recovery 中间件可以从任何 panic 恢复，并且写入一个 500 状态码。
+- gin.CustomRecovery(handle gin.RecoveryFunc)：类似 Recovery 中间件，但是在恢复时还会调用传入的 handle 方法进行处理。
+- gin.BasicAuth()：HTTP 请求基本认证（使用用户名和密码进行认证）。
+
 ## iam项目阅读代码心得
 
 通过cobra、viper、pflag构建整体框架，pflag.FlagSet有name字段，据此分组输出
@@ -1097,6 +1137,7 @@ iamapiserver项目认证两种方法：
 1. apiserver的login接口的basic认证获取token，再利用token去访问其他接口
 2. 直接使用basic认证去访问其他接口，会被autostrategy自动判断认证
 
+### 命令行程序框架
 
 cobra、viper、pflag结合读取配置文件：
 1. 创建读取config文件的pflag
@@ -1110,6 +1151,16 @@ cobra、viper、pflag结合读取配置文件：
 
 cobra外部包装一层app，会先运行cobra命令的RunE:主要作用就是根据app的参数初始化，再运行app的RunFunc:主要作用创建server并运行
 
+Options:
+程序运行需要创建一些对象，这些对象需要传入对应的值来进行初始化，所以对应这些对象分别创建了options结构体，用来传入命令行参数
+
+apiserver启动流程：
+
+![](../../../../reference/pic/iam-start.webp)
+
+web流程：
+
+![](../../../../reference/pic/iam-web.webp)
 
 iam项目业务架构
 
@@ -1119,7 +1170,24 @@ Controller层是在gin的handleFunc中定义的，调用service，再调用repos
 
 ![](../../../../reference/pic/iam-controller.webp)
 
-### 优雅关停
+### 接口认证
+
+四种认证策略：
+
+- auto：根据首部字段不同，自动选择basic或bearer认证
+- basic：basic认证，完全没有JWTtoken存在
+- jwt：login接口使用basic认证，业务接口使用login返回的JWTtoken认证
+- cache：该策略其实是一个 Bearer 认证的实现，Token 采用了 JWT 格式，因为 Token 中的密钥 ID 是从内存中获取的，所以叫 Cache 认证
+
+可以将jwt策略使用在登录接口上，然后将auto策略以中间件的形式作用在业务接口上，实现basic和bearer认证都可以登录
+
+cache策略用在了iam-authzserver上，认证流程是：
+
+1. 先从apiserver认证得到用户密钥
+2. 再在客户端构建token，发送给authserver验证
+3. authzserver收到后会从cache中找对对应用户的密钥验证token
+
+#### 优雅关停
 
 函数返回一个channel阻塞，该函数使用singal.Notify捕获信号
 通过关闭一个channel来解除阻塞
@@ -1171,6 +1239,10 @@ func (s *grpcAPIServer) Run(stopCh <-chan struct{}) {
 ### sdk设计
 
 client-go的设计模式是分多层流式调用的，在每一层都抽象出一个接口
+
+RESTClient是整个 SDK 的核心，RESTClient 向下通过调用Request模块，来完成 HTTP 请求方法、请求路径、请求体、认证信息的构建。
+
+Request 模块最终通过调用gorequest包提供的方法，完成 HTTP 的 POST、PUT、GET、DELETE 等请求，获取 HTTP 返回结果，并解析到指定的结构体中。RESTClient 向上提供 Post() 、 Put() 、 Get() 、 Delete() 等方法来供客户端完成 HTTP 请求。
 
 marmotedu-sdk-go 提供了**两类客户端**，分别是 RESTClient 客户端和基于 RESTClient 封装的客户端。
 
