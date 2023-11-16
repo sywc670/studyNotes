@@ -174,6 +174,7 @@ int container_main(void* arg)
 
 这就是 Mount Namespace 跟其他 Namespace 的使用略有不同的地方：它对容器进程视图的改变，一定是伴随着挂载操作（`mount`）才能生效。
 
+在 Linux 操作系统里，有一个名为 chroot 的命令可以帮助你在 shell 中方便地完成这个工作。顾名思义，它的作用就是帮你“change root file system”，即改变进程的根目录到你指定的位置。
 
 现在，你应该可以理解，对 Docker 项目来说，它**最核心的原理**实际上就是为待创建的用户进程：
 ```
@@ -663,11 +664,6 @@ StatefulSet 的设计其实非常容易理解。它把真实世界里的应用�
 
 可以看到，这里的区别在于，**Headless Service 不需要分配一个 VIP，而是可以直接以 DNS 记录的方式解析出被代理 Pod 的 IP 地址**。
 
-**clusterIP与headless服务的区别**
-
-clusterIP 有VIP 访问VIP会随机访问pod 访问域名会解析到VIP随机访问pod 没有pod的域名
-headless 无VIP 访问服务域名会解析出选中pod的域名解析 可以访问pod的域名
-
 可以看到，所谓的 Headless Service，其实仍是一个标准 Service 的 YAML 文件。只不过，它的 `clusterIP` 字段的值是：None
 
 StatefulSet 管理的“有状态应用”的多个实例，也都是通过`同一份 Pod 模板`创建出来的，使用的是同一个 Docker 镜像。这也就意味着：如果你的应用要求不同节点的镜像不一样，那就不能再使用 StatefulSet 了。对于这种情况，应该考虑我后面会讲解到的 `Operator`。
@@ -1063,8 +1059,6 @@ spec:
 
 与此同时，DaemonSet 使用 ControllerRevision，来保存和管理自己对应的“版本”。这种“面向 API 对象”的设计思路，大大简化了控制器本身的逻辑，也正是 Kubernetes 项目“声明式 API”的优势所在。
 
-
-**StatefulSet 与 DaemonSet 都使用 ControllerRevision 进行pod的版本管理**，但是ControllerRevision并不管理pod，所以与replicaset不同，ControllerRevision的owner是daemonset这些
 
 ## job cronjob
 

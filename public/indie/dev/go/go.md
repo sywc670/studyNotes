@@ -1,6 +1,8 @@
-## 语言设计原理
+## 语言相关原理知识
 
-### uintptr和unsafe.Pointer的区别
+### 小知识点
+
+#### uintptr和unsafe.Pointer的区别
 
 unsafe.Pointer只是单纯的通用指针类型，用于转换不同类型指针，它不可以参与指针运算；
 
@@ -9,6 +11,117 @@ unsafe.Pointer只是单纯的通用指针类型，用于转换不同类型指针
 unsafe.Pointer 可以和 普通指针 进行相互转换；
 
 unsafe.Pointer 可以和 uintptr 进行相互转换。
+
+#### atomic
+
+原子操作由底层硬件支持，而锁则由操作系统的调度器实现。**锁应当用来保护一段逻辑，对于一个变量更新的保护，原子操作通常会更有效率**，并且更能利用计算机多核的优势，如果要更新的是一个复合对象，则应当使用`atomic.Value`封装好的实现。
+
+#### 多个变量同时赋值
+
+```go
+    // 下面的赋值是语法糖，前面的赋值不会影响后面的赋值，因为有临时变量
+	// tmp := dp[j+1]
+	// dp[j+1] = pre+1
+	// pre = tmp
+	dp[j+1], pre = pre+1, dp[j+1]
+```
+
+#### sync.Cond
+
+```go
+var done = false
+
+func read(name string, c *sync.Cond) {
+	c.L.Lock()
+	for !done {
+		c.Wait()
+	}
+	fmt.Println(name, "starts reading")
+	c.L.Unlock()
+}
+
+func write(name string, c *sync.Cond) {
+	fmt.Println(name, "starts writing")
+	time.Sleep(time.Second)
+	done = true
+	fmt.Println(name, "wakes all")
+	c.Broadcast()
+}
+
+func main() {
+	cond := sync.NewCond(&sync.Mutex{})
+
+	go read("reader1", cond)
+	go read("reader2", cond)
+	go read("reader3", cond)
+	write("writer", cond)
+
+	time.Sleep(time.Second * 3)
+}
+```
+
+sync.Cond 不能被复制的原因，并不是因为其内部嵌套了 Locker。NewCond 时传入的 Mutex/RWMutex 指针，对于 Mutex 指针复制是没有问题的。
+
+主要原因是 sync.Cond 内部是维护着一个 Goroutine 通知队列 notifyList。如果这个队列被复制的话，那么在并发场景下导致不同 Goroutine 之间操作的 notifyList.wait、notifyList.notify 并不是同一个，这会导致出现有些 Goroutine 会一直阻塞。
+
+实际上 sync.Cond 与 Channel 是有区别的，channel 定位于通信，用于一发一收的场景，sync.Cond 定位于同步，用于一发多收的场景。虽然 channel 可以通过 close 操作来达到一发多收的效果，但是 closed 的 channel 已无法继续使用，而 sync.Cond 依旧可以继续使用。这可能就是“全能”与“专精”的区别。
+
+#### sync.Pool
+
+对于很多需要重复分配、回收内存的地⽅，sync.Pool 是⼀个很好的选择。频繁地分配、回收内存会给 GC 带来⼀定的负担，严重的时候会引起 CPU 的⽑刺，⽽ sync.Pool 可以将暂时不⽤的对象缓存起来，待下次需要的时候直接使⽤，不⽤再次经过内存分配，复⽤对象的内存，减轻 GC 的压⼒，提升系统的性能。
+
+#### struct比较
+
+相同struct类型的可以⽐较，但是仅限其字段可以比较的时候
+
+不同struct类型的不可以⽐较,编译都不过，类型不匹配
+
+#### iota使用
+
+```go
+func Test10(t *testing.T) {
+ const (
+ x = iota
+ _
+ y
+ z = "pi"
+ k
+ p = iota
+ q
+ )
+ fmt.Println(x, y, z, k, p, q)
+}
+// 0 2 pi pi 5 6
+```
+
+#### panic recover
+
+一个协程会发生 panic ，导致程序崩溃，但是只会执行自己所在 Goroutine 的延迟函数，所以正好验证了多个 Goroutine 之间没有太多的关联，一个 Goroutine 在 panic 时也不应该执行其他 Goroutine 的延迟函数。
+
+#### 大端 小端
+
+[ref](https://www.ruanyifeng.com/blog/2022/06/endianness-analysis.html)
+
+大端序的最高位在左边，最低位在右边，符合阅读习惯。所以，对于这些国家的人来说，从左到右的大端序的可读性更好。
+
+但是现实中，从右到左的小端序虽然可读性差，但应用更广泛，x86 和 ARM 这两种 CPU 架构都采用小端序，这是为什么？
+
+或者换一种问法，两种不同的字节序为什么会并存，统一规定只使用一种，难道不是更方便吗？
+
+原因是它们有各自的适用场景，某些场景大端序有优势，另一些场景小端序有优势，下面就逐一分析。
+
+**如果需要逐位运算，或者需要到从个位数开始运算，都是小端序占优势。反之，如果运算只涉及到高位，或者数据的可读性比较重要，则是大端序占优势。**
+
+```go
+// 判断是否大端序
+var data int32 = 1
+pointer := unsafe.Pointer(&data)
+bp := (*byte)(pointer)
+if *bp == 1 {
+	fmt.Println(true)
+}
+	```
+
 
 ### 内存管理
 
@@ -97,6 +210,8 @@ Go 1.3 版本前使用的栈结构是分段栈，随着goroutine 调用的函数
 
 [ref](https://www.yuque.com/aceld/golang/zhzanb)
 
+[非常容易理解的博文，建议只看这个](https://www.cnblogs.com/cxy2020/p/16321884.html)
+
 标记清除算法明了，过程鲜明干脆，但是也有非常严重的问题。
 
 - STW，stop the world；让程序暂停，程序出现卡顿 (重要问题)；
@@ -138,16 +253,31 @@ Go 1.3 版本前使用的栈结构是分段栈，随着goroutine 调用的函数
 
 Go V1.8版本引入了混合写屏障机制（hybrid write barrier），避免了对栈re-scan的过程，极大的减少了STW的时间。结合了两者的优点。
 
-1、GC开始将栈上的对象全部扫描并标记为黑色(之后不再进行第二次重复扫描，无需STW)，
+1、GC刚开始的时候，会将栈上的可达对象全部标记为黑色(之后不再进行第二次重复扫描，无需STW)，
 
 2、GC期间，任何在栈上创建的新对象，均为黑色。
 
-3、被删除的对象标记为灰色。
+3、对该对象触发，被删除“引用”的白色对象标记为灰色。
 
-4、被添加的对象标记为灰色。
+4、对该对象触发，被添加“引用”的白色对象标记为灰色。
 
 满足: 变形的弱三色不变式.
 
+上面两点只有一个目的，将栈上的可达对象全部标黑，最后无需对栈进行STW，就可以保证栈上的对象不会丢失。有人说，一直是黑色的对象，那么不就永远清除不掉了么，这里强调一下，标记为黑色的是可达对象，不可达的对象一直会是白色，直到最后被回收。
+
+1.8版本还有STW吗？
+
+1. STW就是为了开启写屏障，这也是GC开始的第一步，开启写屏障之后就是并发标记，标记结束后，再来一个STW，关闭写屏障。最后就是清理工作。
+2. 混合写屏障是去除整体的STW 的一个改进，转而并发一个一个栈处理的方式(每个栈单独暂停)，从而消除了整机 STW 的影响，带来了吞吐的提升。
+
+GC是一轮一轮触发的，不是整个运行过程只有一次
+
+#### GC触发
+
+1. 程序内存不足
+2. 程序内存使用到达阈值
+3. sysmon监控到一段时间没有GC
+4. 手动触发runtime.GC
 
 ### GMP
 
@@ -291,8 +421,13 @@ select的case语句**读channel不会阻塞，尽管channel中没有数据**。�
 
 ```go
 s1 := make([]int, 5, 10)
-s2 := s1[:5:7] // 第三位也是cap，不能超过s1的cap
+s2 := s1[:6:7] // 第三位也是cap，不能超过s1的cap，但是第二位可以超过切片的len，不能超过cap
+s1[8] = 1 // panic 
 ```
+
+只有数组可以比较，切片不可比较
+
+切片初始化指data会指向一个数组，如果没有初始化就只是零值nil
 
 使用copy()内置函数拷贝两个切片时，会将源切片的数据逐个拷贝到目的切片指向的数组中，拷贝数量取两个切片长度的最小值。
 
@@ -468,18 +603,3 @@ r保存了一个(value, type)对来表示其所存储值的信息。 value即为
 - 反射第二定律：反射可以将反射对象还原成interface对象
 - 反射第三定律：反射对象可修改，value值必须是可设置的
 
-## 面试相关知识点记录
-
-### atomic
-
-原子操作由底层硬件支持，而锁则由操作系统的调度器实现。**锁应当用来保护一段逻辑，对于一个变量更新的保护，原子操作通常会更有效率**，并且更能利用计算机多核的优势，如果要更新的是一个复合对象，则应当使用`atomic.Value`封装好的实现。
-
-### 多个变量同时赋值
-
-```go
-    // 下面的赋值是语法糖，前面的赋值不会影响后面的赋值，因为有临时变量
-	// tmp := dp[j+1]
-	// dp[j+1] = pre+1
-	// pre = tmp
-	dp[j+1], pre = pre+1, dp[j+1]
-```
