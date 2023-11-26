@@ -603,3 +603,8 @@ r保存了一个(value, type)对来表示其所存储值的信息。 value即为
 - 反射第二定律：反射可以将反射对象还原成interface对象
 - 反射第三定律：反射对象可修改，value值必须是可设置的
 
+## 使用
+
+### template
+
+[ref](https://www.cnblogs.com/f-ck-need-u/p/10053124.html#%E5%B5%8C%E5%A5%97templatedefine%E5%92%8Ctemplate)

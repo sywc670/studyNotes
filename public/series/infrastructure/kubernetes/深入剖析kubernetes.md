@@ -2025,9 +2025,6 @@ PersistentVolumeController 会不断地查看当前每一个 PVC，是不是已�
 
 这一步为虚拟机挂载远程磁盘的操作，对应的正是“两阶段处理”的第一阶段。在 Kubernetes 中，我们把这个阶段称为 **Attach**。
 
->attach理解为为虚拟机添加一块硬盘连接上去，没有执行挂载，只是能看到硬盘
-mount理解为在格式化之后在宿主机上挂载，但是没有挂载到pod中，需要kubelet通过cri来挂载，也就是docker来实现挂载
-
 Attach 阶段完成后，为了能够使用这个远程磁盘，kubelet 还要进行第二个操作，即：**格式化这个磁盘设备，然后将它挂载到宿主机指定的挂载点上**。不难理解，这个挂载点，正是我在前面反复提到的 Volume 的宿主机目录。所以，这一步相当于执行：
 ```shell
 # 通过lsblk命令获取磁盘设备ID
@@ -2084,11 +2081,7 @@ parameters:
 
 需要注意的是，**StorageClass 并不是专门为了 Dynamic Provisioning 而设计的**。比如，在本篇一开始的例子里，我在 PV 和 PVC 里都声明了 storageClassName=manual。而我的集群里，`实际上并没有一个名叫 manual 的 StorageClass 对象`。这完全没有问题，这个时候 Kubernetes 进行的是 `Static Provisioning`，但在做绑定决策的时候，它依然会考虑 PV 和 PVC 的 StorageClass 定义。
 
->只要sc名字匹配，就会进行匹配，而不是实际存在这样的sc
-使用sc可以将pvc和pv对应起来，即使不使用dynamic provisioning
-
 实际上，如果你的集群已经开启了名叫 **DefaultStorageClass 的 Admission Plugin**，它就会为 PVC 和 PV 自动添加一个默认的 StorageClass；否则，PVC 的 storageClassName 的值就是“”，这也意味着它只能够跟 storageClassName 也是“”的 PV 进行绑定。
-
 
 总结：
 
@@ -2313,8 +2306,6 @@ domount() {
 
 **在实际使用 CSI 插件的时候，我们会将这三个 External Components 作为 `sidecar` 容器和 `CSI 插件`放置在`同一个 Pod` 中**。由于 External Components 对 CSI 插件的调用非常频繁，所以这种 sidecar 的部署方式非常高效。
 
->rook会把driver registrar和csi插件放在demonset中，把provisioner和attacher还有resizer等容器和csi插件放在deployment里
-
 接下来，我再为你讲解一下 CSI 插件的里三个服务：CSI Identity、CSI Controller 和 CSI Node。
 
 其中，CSI 插件的 CSI Identity 服务，负责对外暴露这个插件本身的信息，如下所示：
@@ -2459,7 +2450,7 @@ $ iptables -t raw -A OUTPUT -p icmp -j TRACE
 $ iptables -t raw -A PREROUTING -p icmp -j TRACE
 ```
 
-通过上述设置，你就可以在 /var/log/syslog 里看到数据包传输的日志了。
+通过上述设置，你就可以在 `/var/log/syslog` 里看到数据包传输的日志了。
 
 **定位方式之一**。 还有一种方式是使用`iptables -nvL <chain> -t <table> --line`来查看对应的chain的报文数目（可以先清空计数：`iptables -Z <chain> -t <table>`）
 
@@ -2754,8 +2745,6 @@ $ ip link set vethb4963f3 master cni0
 #### calico网络
 
 ![](https://mmbiz.qpic.cn/mmbiz_png/ibD9iaaPDn99iaJZiaVbsmZRUGgEVwxN9vGXnyIciar1B1ZhKqW7FX1dRdcb3VuGfgOHAa8Oa6r2Q1EO3ftdU3aibibwg/640?wx_fmt=png&wxfrom=5&wx_lazy=1&wx_co=1)
-
-[来源](https://mp.weixin.qq.com/s?__biz=MzA4Nzg5Nzc5OA==&mid=2651726665&idx=1&sn=f4e183df452f3545b7cf5158284fc9f8&chksm=8bc8e0e0bcbf69f6736fe5dd1313236a7554b7526bca3658bc096787ea688b31d76d85ec0adc&mpshare=1&scene=1&srcid=1209WhfipAtf2NRuMZrjaDoR&sharer_sharetime=1670558969690&sharer_shareid=1817186607f682c2c8dc4a6ca1d644dc&version=4.1.0.6007&platform=win#rd)
 
 #### calico
 
