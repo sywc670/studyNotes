@@ -42,13 +42,15 @@ helm upgrade mysql-1629528555 bitnami/mysql --set auth.rootPassword='iam59!z$'
 helm dependency update
 ```
 
-### helm配置数据
+### value配置
 
 -f, --values：使用 YAML 文件覆盖配置。可以指定多次，优先使用最右边的文件。
 
 --set：通过命令行的方式对指定配置项进行覆盖。
 
 如果同时使用两种方式，则 --set 中的值会被合并到 --values 中，但是 --set 中的值优先级更高。在--set中覆盖的内容会被保存在 ConfigMap 中。你可以通过 `helm get values release-name` 来查看指定 Release 中 --set 设置的值，也可以通过运行 `helm upgrade` 并指定 --reset-values 字段，来清除 --set中设置的值。
+
+-f多用于多环境values配置，可以根据环境快速切换
 
 ### chart依赖关系
 
@@ -77,3 +79,25 @@ Helm会尝试加载CRD目录中 所有的 文件到Kubernetes。
 
 helm由模板+配置组成，可以灵活的根据环境进行配置
 
+### helm模板使用
+
+include和template不同，template引入一个模板，include通常是引入部分
+
+```yaml
+{{ include "path/to/child.tpl" . | indent 4 }}
+```
+
+block和define类似，block定义一个可重用块，define定义一个模板，define可以传参来重写block的定义
+
+所有的 Helm 内置变量都以大写字母开头，以便与用户定义的 value 进行区分，例如.Release.Name、.Capabilities.KubeVersion
+
+with可以限制上下文范围
+
+```yaml
+{{ with .Values.someKey }}
+  # 在这里，. 表示 .Values.someKey 的值
+  # 你可以在这个范围内进行操作
+{{ end }}
+```
+
+toYaml将值转换成字符串，nindent和indent区别

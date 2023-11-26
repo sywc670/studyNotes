@@ -8,6 +8,8 @@
 kubectl get pods -A -o json | jq -r '.items[] | select(.status.phase != "Running") | "kubectl delete pods \(.metadata.name) -n \(.metadata.namespace) "' | xargs -n 1 bash -c
 ```
 
+每次通过过滤，再管道符后，.会变成过滤后的条件，而select之后不会变
+
 `select(foo)`: 如果foo返回true，则输入保持不变
 
 `map(foo)`: 每个输入调用过滤器
