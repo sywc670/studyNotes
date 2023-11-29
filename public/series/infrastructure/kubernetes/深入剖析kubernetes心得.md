@@ -8,6 +8,8 @@ mount namespace只是隔离了文件系统，新创建的容器可以直接看�
 
 docker inspect看到的层是rootfs，每一层都是rootfs的一部分，这部分表现在`容器运行时目录`中，就是只读层，目录中还会加上init层和读写层
 
+在 Kubernetes 里，/etc/hosts 文件类似于init层，是单独挂载的
+
 只读层就算是在`容器镜像目录`中的编号也与在inspect中看到的编号不一样
 
 Dockerfile 中的每个原语执行后，都会生成一个对应的镜像层。即使原语本身并没有明显地修改文件的操作（比如，ENV 原语），它对应的层也会存在。只不过在外界看来，这个层是空的。
@@ -21,14 +23,14 @@ docker容器进程可以在宿主机上看到并查看信息，故可以exec
 **clusterIP与headless服务的区别**
 
 clusterIP 
-- 有VIP 访问VIP会随机访问pod 
+- 有VIP 访问VIP会随机访问pod，这个VIP地址是稳定的
 - 访问域名会解析到VIP随机访问pod 
-- 没有pod的域名
+- 有pod的域名，格式为podIP地址(横杠连接).namespace名字.pod.cluster.local
 
 headless 
 - 无VIP 
 - 访问服务域名会解析出选中pod的域名解析并返回列表 
-- 可以访问pod的域名
+- 可以访问pod的域名，格式为PodName.ServiceName.NameSpace.svc.cluster.local，这个pod域名是稳定的
 
 ### 版本控制
 
@@ -192,7 +194,7 @@ vtep和udp模式的flanneld类似，但是解封装对象是二层数据帧，�
 
 保留docker0或者cni0网桥，在宿主机上创建路由规则，根据下一跳地址来决定发送给谁，也就是目标mac地址填写目标主机，但是目标ip地址还是容器地址
 
-这样必须保证二层网络连通才行，因为寻址要靠mac地址
+**这样必须保证二层网络连通才行，因为寻址要靠mac地址**
 
 flannel只需要在etcd中维护容器子网和宿主机地址条目，及时更新路由规则
 
@@ -245,11 +247,136 @@ flannel的cni插件实际上只会对第二部分做补充，然后将两部分�
 正常模式和flannel的host-gw类似，根据下一跳寻址，但不需要cni0网桥，使用bgp
 
 在了解了 BGP 之后，**Calico 项目的架构就非常容易理解了。它由三个部分组成**：
-Calico 的 `CNI` 插件。这是 Calico 与 Kubernetes 对接的部分。我已经在上一篇文章中，和你详细分享了 CNI 插件的工作原理，这里就不再赘述了。
-`Felix`。它是一个 DaemonSet，负责在宿主机上插入路由规则（即：写入 Linux 内核的 `FIB 转发信息库`），以及维护 Calico 所需的网络设备等工作。
-`BIRD`。它就是 BGP 的客户端，专门负责在集群里`分发路由规则信息`。
+
+- Calico 的 `CNI` 插件。这是 Calico 与 Kubernetes 对接的部分。我已经在上一篇文章中，和你详细分享了 CNI 插件的工作原理，这里就不再赘述了。
+- `Felix`。它是一个 DaemonSet，负责在宿主机上插入路由规则（即：写入 Linux 内核的 `FIB 转发信息库`），以及维护 Calico 所需的网络设备等工作。
+- `BIRD`。它就是 BGP 的客户端，专门负责在集群里`分发路由规则信息`。
 
 可以看到，Calico 的 CNI 插件会为每个容器设置一个 `Veth Pair` 设备，然后把其中的一端放置在宿主机上（它的名字以 `cali` 前缀开头）。
-此外，**由于 Calico 没有使用 CNI 的网桥模式，Calico 的 CNI 插件还需要在宿主机上为每个容器的 Veth Pair 设备配置一条路由规则，用于接收传入的 IP 包。**
+此外，**由于 Calico 没有使用 CNI 的网桥模式，Calico 的 `CNI` 插件还需要在宿主机上为每个容器的 Veth Pair 设备配置一条路由规则，用于接收传入的 IP 包。**
 
-其中，**这里最核心的“`下一跳`”路由规则，就是由 Calico 的 Felix 进程负责维护的。这些`路由规则信息`，则是通过 BGP Client 也就是 BIRD 组件，使用 BGP 协议传输而来的。**
+其中，**这里最核心的“`下一跳`”路由规则，就是由 Calico 的 `Felix` 进程负责维护的。这些`路由规则信息`，则是通过 BGP Client 也就是 `BIRD` 组件，使用 BGP 协议传输而来的。**
+
+总结：bird负责分发路由信息，felix负责维护从宿主机出去的路由规则，CNI插件负责维护进入宿主机的路由规则
+
+**问题：从容器发出的包目的MAC地址是多少？**
+
+应为cali那个veth pair的MAC地址，这个veth pair插在宿主机上，所以发送过去进行iptables的路由，具体还未清楚其ip地址为多少，因为每个容器都会对应一个veth pair，所以不可能是网关ip地址
+
+如果是flannel，那么目的MAC地址为cni0网桥，根据fdb规则，发给宿主机
+
+##### BGP
+
+目的：自动对边界路由的路由表进行配置和维护，实现大规模网络中的节点路由信息共享，替代flannel维护路由表的功能
+
+在使用了 BGP 之后，你可以认为，在每个边界网关上都会运行着一个小程序，它们会将各自的路由表信息，通过 `TCP` 传输给其他的边界网关。而其他边界网关上的这个小程序，则会对收到的这些数据进行分析，然后将需要的信息添加到自己的路由表里。
+
+```
+[BGP消息]
+我是宿主机192.168.1.3
+10.233.2.0/24网段的容器都在我这里
+这些容器的下一跳地址是我
+```
+
+**node-to-node mesh:**
+
+每台宿主机上的 BGP Client 都需要跟其他所有节点的 BGP Client 进行通信以便交换路由信息。但是，随着节点数量 N 的增加，这些连接的数量就会以 N²的规模快速增长，从而给集群本身的网络带来巨大的压力。
+
+默认配置，适合小于100个节点集群
+
+**route reflector:**
+
+在这种模式下，Calico 会指定一个或者几个专门的节点，来负责跟所有节点建立 BGP 连接从而学习到全局的路由规则。而其他节点，只需要跟这几个专门的节点交换路由信息，就可以获得整个集群的路由规则信息了。
+
+BGP 连接的规模控制在 N 的数量级上
+
+##### IPIP
+
+![](/reference/pic/calico_ipip.webp)
+
+在ipip模式下，felix添加的路由规则会变化，发出去的不是eth0而是tunl0设备，一个ip隧道设备，由linux的ipip驱动接管（内核态），进入隧道的包会直接封装进一个宿主机网络的IP包中
+
+这个封装与flannel二层封装方案有区别，这是三层封装，目的是为了打破二层连通的规则，而二层封装方案是为了寻找容器地址与宿主机的对应地址
+
+原理：普通模式无法通过目标主机的mac地址来寻址，因为不在一个子网里，不能用ip地址来获取mac地址，但是可以将包封装在一个普通的ip包内可以直接用ip地址来寻址发给目标主机，这里`10.233.2.0/24 via 192.168.2.2 tunl0`路由规则其实就已经起到了一个目标主机与容器地址的对应绑定了，完成了二层封装方案的目的
+
+在实际测试中，Calico IPIP 模式与 Flannel VXLAN 模式的性能大致相当。
+
+##### 私有云不用IPIP的方法
+
+使用IPIP，是因为`10.233.2.0/24 via 192.168.2.2 eth0`将目标主机mac地址填入目标mac地址，但是由于不是二层连通，在网关处会由于mac地址不匹配被网关丢弃，如果可以配置网关也使用BGP学习的话，那么可以不使用IPIP
+
+如`10.233.2.0/24 via 192.168.1.1 eth0`设置下一跳为网关，到达网关后又有路由规则`10.233.2.0/24 via 192.168.2.1 eth0`，这样可以接力
+
+公有云不会允许修改宿主机之间的网关
+
+方案一：所有宿主机都跟宿主机网关建立 BGP Peer 关系
+
+这种方式下，Calico 要求宿主机网关必须支持一种叫作 Dynamic Neighbors 的 BGP 配置方式。这是因为，在常规的路由器 BGP 配置里，运维人员必须明确给出所有 BGP Peer 的 IP 地址。考虑到 Kubernetes 集群可能会有成百上千个宿主机，而且还会动态地添加和删除节点，这时候再手动管理路由器的 BGP 配置就非常麻烦了。Dynamic Neighbors 则允许你给路由器配置一个网段，然后路由器就会自动跟该网段里的主机建立起 BGP Peer 关系。
+
+方案二：使用一个或多个独立组件负责搜集整个集群里的所有路由信息，然后通过 BGP 协议同步给网关
+
+我们前面提到，在大规模集群中，Calico 本身就推荐使用 Route Reflector 节点的方式进行组网。所以，这里负责跟宿主机网关进行沟通的独立组件，直接由 Route Reflector 兼任即可。
+
+更重要的是，这种情况下网关的 BGP Peer 个数是有限并且固定的。所以我们就可以直接把这些独立组件配置成路由器的 BGP Peer，而无需 Dynamic Neighbors 的支持。当然，这些独立组件的工作原理也很简单：它们只需要 WATCH Etcd 里的宿主机和对应网段的变化信息，然后把这些信息通过 BGP 协议分发给网关即可。
+
+#### 三层和隧道的异同
+
+相同之处是都实现了跨主机容器的三层互通，而且都是通过对目的 MAC 地址的操作来实现的；
+不同之处是三层通过配置下一条主机的路由规则来实现互通，隧道则是通过通过在 IP 包外再封装一层 MAC 包头来实现。
+三层的优点：少了封包和解包的过程，性能肯定是更高的。
+三层的缺点：需要自己想办法维护路由规则。
+隧道的优点：简单，原因是大部分工作都是由 Linux 内核的模块实现了，应用层面工作量较少。
+隧道的缺点：主要的问题就是性能低。
+
+#### networkpolicy
+
+如果没有，那么默认为允许，如果networkpolicy选中，默认该规则是白名单，其余都不允许
+
+```yaml
+  ...
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          user: alice
+    - podSelector:
+        matchLabels:
+          role: client
+  # or
+  ...
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          user: alice
+      podSelector:
+        matchLabels:
+          role: client
+  # and
+```
+
+networkpolicy的控制器必须由CNI插件来实现才行，如果没有就无法生效，flannel没有，calico和weave有，该控制器根据networkpolicy对象来控制iptables规则，拦截对应规则的流量并过滤
+
+如果想要在使用 Flannel 的同时还使用 NetworkPolicy 的话，你就需要再额外安装一个网络插件，比如 Calico 项目，来负责执行 NetworkPolicy
+
+#### service
+
+Service 是由 kube-proxy 组件，加上 iptables 来共同实现的。
+
+clusterIP只在集群中生效，实现原理：
+
+kube-proxy通过service对象的informer感知到对象创建，从而在宿主机创建iptables规则，使得访问VIP的规则被转到特定链上匹配，在链上就会用random模式来进行负载均衡，这个链是kube-proxy监听pod的变化维护的，然后会对包进行一个dnat修改vip为对应pod地址，最终访问到一个pod
+
+在 DNAT 规则之前，iptables 对流入的 IP 包还设置了一个“标志”（–set-xmark）
+
+##### ipvs实现
+
+iptables模式的问题：当存在大量pod时，大量的iptables规则会被刷新，导致cpu资源被严重占用
+
+ipvs原理：
+
+kube-proxy会在宿主机新建一个虚拟网卡，并分配VIP，通过ipvs模块为该网卡设置数个虚拟主机，并设置负载均衡模式，用`ipvsadm -ln`查看
+
+ipvs只负责负载均衡和代理，其余还是由iptables负责
+
