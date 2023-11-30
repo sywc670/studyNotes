@@ -380,3 +380,7 @@ kube-proxy会在宿主机新建一个虚拟网卡，并分配VIP，通过ipvs模
 
 ipvs只负责负载均衡和代理，其余还是由iptables负责
 
+##### nodeport
+
+原理：kube-proxy在每台宿主机新增iptables规则，将访问端口的包转到对应service的链上，后面就和访问clusterIP一样了，但是在发给pod之前会对包做snat，将client的源IP地址改成这台宿主机上的 CNI 网桥地址，或者宿主机本身的 IP 地址（如果 CNI 网桥不存在的话），这是为了防止client发给一个节点但是被另一个节点回复，可能会报错，所以snat之后相当于一个中间代理
+
