@@ -7,7 +7,7 @@ prometheus operator会根据prometheus、alertmanager、servicemonitor这些cr�
 #### 方案
 
 - 利用cadvisor拿到容器指标
-- 通过kubelet暴露接口拿到kubelet指标
+- 通过kubelet暴露接口拿到kubelet指标 其它组件也可以
 - 通过node-exporter拿到主机指标
 - 通过blackbox-exporter拿到网络指标
 - 通过kube-state-metrics拿到k8s资源对象和组件指标

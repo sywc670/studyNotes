@@ -55,16 +55,12 @@
   - [ingress](#ingress)
   - [资源调度](#资源调度)
   - [调度器](#调度器)
-    - [总结](#总结)
     - [gpu 支持](#gpu-支持)
-    - [gpu 总结](#gpu-总结)
   - [kubelet cri](#kubelet-cri)
   - [kata container and gvisor](#kata-container-and-gvisor)
   - [prometheus](#prometheus)
     - [自定义监控指标](#自定义监控指标)
-    - [hpa 总结](#hpa-总结)
   - [日志](#日志)
-    - [总结](#总结-1)
 
 
 # docker 篇
@@ -3521,22 +3517,7 @@ spec:
 
 第一步，调度器会检查牺牲者列表，清理这些 Pod 所携带的 nominatedNodeName 字段。第二步，调度器会把抢占者的 nominatedNodeName，设置为被抢占的 Node 的名字。第三步，调度器会开启一个 Goroutine，同步地删除牺牲者。而第二步对抢占者 Pod 的更新操作，就会触发到我前面提到的“重新做人”的流程，从而让抢占者在下一个调度周期重新进入调度流程。所以接下来，调度器就会通过正常的调度流程把抢占者调度成功。这也是为什么，我前面会说调度器并不保证抢占的结果：在这个正常的调度流程里，是一切皆有可能的。不过，对于任意一个待调度 Pod 来说，因为有上述抢占者的存在，它的调度过程，其实是有一些特殊情况需要特殊处理的。具体来说，在为某一对 Pod 和 Node 执行 Predicates 算法的时候，如果待检查的 Node 是一个即将被抢占的节点，即：调度队列里有 nominatedNodeName 字段值是该 Node 名字的 Pod 存在（可以称之为：“潜在的抢占者”）。那么，调度器就会对这个 Node ，将同样的 Predicates 算法运行两遍。第一遍， 调度器会假设上述“潜在的抢占者”已经运行在这个节点上，然后执行 Predicates 算法；第二遍， 调度器会正常执行 Predicates 算法，即：不考虑任何“潜在的抢占者”。而只有这两遍 Predicates 算法都能通过时，这个 Pod 和 Node 才会被认为是可以绑定（bind）的。不难想到，这里需要执行第一遍 Predicates 算法的原因，是由于 InterPodAntiAffinity 规则的存在。由于 InterPodAntiAffinity 规则关心待考察节点上所有 Pod 之间的互斥关系，所以我们在执行调度算法时必须考虑，如果抢占者已经存在于待考察 Node 上时，待调度 Pod 还能不能调度成功。当然，这也就意味着，我们在这一步只需要考虑那些优先级等于或者大于待调度 Pod 的抢占者。毕竟对于其他较低优先级 Pod 来说，待调度 Pod 总是可以通过抢占运行在待考察 Node 上。而我们需要执行第二遍 Predicates 算法的原因，则是因为“潜在的抢占者”最后不一定会运行在待考察的 Node 上。关于这一点，我在前面已经讲解过了：Kubernet
 
-### 总结
 
-调度器的作用就是为Pod寻找一个合适的Node。
-
-调度过程：待调度Pod被提交到apiServer -> 更新到etcd -> 调度器Watch etcd感知到有需要调度的pod（Informer） -> 取出待调度Pod的信息 ->Predicates： 挑选出可以运行该Pod的所有Node  ->  Priority：给所有Node打分 -> 将Pod绑定到得分最高的Node上 -> 将Pod信息更新回Etcd -> node的kubelet感知到etcd中有自己node需要拉起的pod -> 取出该Pod信息，做基本的二次检测（端口，资源等） -> 在node 上拉起该pod 。
-
-Predicates阶段会有很多过滤规则：比如volume相关，node相关，pod相关
-Priorities阶段会为Node打分，Pod调度到得分最高的Node上，打分规则比如： 空余资源、实际物理剩余、镜像大小、Pod亲和性等
-
-Kuberentes中可以为Pod设置优先级，高优先级的Pod可以： 1、在调度队列中先出队进行调度 2、调度失败时，触发抢占，调度器为其抢占低优先级Pod的资源。
-
-Kuberentes默认调度器有两个调度队列：
-activeQ：凡事在该队列里的Pod，都是下一个调度周期需要调度的
-unschedulableQ:  存放调度失败的Pod，当里面的Pod更新后就会重新回到activeQ，进行“重新调度”
-
-默认调度器的抢占过程： 确定要发生抢占 -> 调度器将所有节点信息复制一份，开始模拟抢占 ->  检查副本里的每一个节点，然后从该节点上逐个删除低优先级Pod，直到满足抢占者能运行 -> 找到一个能运行抢占者Pod的node -> 记录下这个Node名字和被删除Pod的列表 -> 模拟抢占结束 -> 开始真正抢占 -> 删除被抢占者的Pod，将抢占者调度到Node上 
 
 ### gpu 支持
 
@@ -3598,16 +3579,6 @@ http://localhost:8001/api/v1/nodes/<your-node-name>/status
 
 至此，Kubernetes 为一个 Pod 分配一个 GPU 的流程就完成了。
 
-### gpu 总结
-
-Kuberentes通过Extended Resource来支持自定义资源，比如GPU。为了让调度器知道这种自定义资源在各Node上的数量，需要的Node里添加自定义资源的数量。实际上，这些信息并不需要人工去维护，所有的硬件加速设备的管理都通过Device Plugin插件来支持，也包括对该硬件的Extended Resource进行汇报的逻辑。
-
-Device Plugin 、kubelet、调度器如何协同工作：
-
-汇报资源： Device Plugin通过gRPC与本机kubelet连接 ->  Device Plugin定期向kubelet汇报设备信息，比如GPU的数量 -> kubelet 向APIServer发送的心跳中，以Extended Reousrce的方式加上这些设备信息，比如GPU的数量 
-
-调度： Pod申明需要一个GPU -> 调度器找到GPU数量满足条件的node -> Pod绑定到对应的Node上 -> kubelet发现需要拉起一个Pod，且该Pod需要GPU -> kubelet向 Device Plugin 发起 Allocate()请求 -> Device Plugin根据kubelet传递过来的需求，找到这些设备对应的设备路径和驱动目录，并返回给kubelet -> kubelet将这些信息追加在创建Pod所对应的CRI请求中 -> 容器创建完成之后，就会出现这个GPU设备（设备路径+驱动目录）-> 调度完成
-
 ## kubelet cri
 
 ![](/reference/pic/kubelet.webp)
@@ -3623,6 +3594,10 @@ Device Plugin 、kubelet、调度器如何协同工作：
 那么这个 SyncLoop，又是如何根据 Pod 对象的变化，来进行容器操作的呢？**实际上，kubelet 也是通过 `Watch` 机制，监听了与自己相关的 Pod 对象的变化。当然，这个 Watch 的过滤条件是该 Pod 的 `nodeName` 字段与自己相同。kubelet 会把这些 Pod 的信息缓存在自己的内存里。**
 
 而当一个 Pod 完成调度、与一个 Node 绑定起来之后， 这个 Pod 的变化就会触发 kubelet 在控制循环里注册的 Handler，也就是上图中的 `HandlePods` 部分。此时，通过检查该 Pod 在 kubelet 内存里的状态，kubelet 就能够判断出这是一个新调度过来的 Pod，从而触发 Handler 里 ADD 事件对应的处理逻辑。在具体的处理过程当中，kubelet 会启动一个名叫 `Pod Update Worker` 的、单独的 Goroutine 来完成对 Pod 的处理工作。
+
+比如，如果是 ADD 事件的话，kubelet 就会为这个新的 Pod 生成对应的 Pod Status，检查 Pod 所声明使用的 Volume 是不是已经准备好。然后，调用下层的容器运行时（比如 Docker），开始创建这个 Pod 所定义的容器。
+
+而如果是 UPDATE 事件的话，kubelet 就会根据 Pod 对象具体的变更情况，调用下层容器运行时进行容器的重建工作。
 
 在这里需要注意的是，kubelet 调用下层容器运行时的执行过程，并不会直接调用 Docker 的 API，而是通过一组叫作 `CRI`（Container Runtime Interface，容器运行时接口）的 gRPC 接口来间接执行的。
 
@@ -3766,15 +3741,7 @@ spec:
 
 而且，Kubernetes 社区已经为你提供了一套叫作 `KubeBuilder` 的工具库，帮助你生成一个 API Server 的完整代码框架，你只需要在里面添加自定义 API，以及对应的业务逻辑即可。
 
-### hpa 总结
 
-HPA 通过 HorizontalPodAutoscaler 配置要访问的 Custom Metrics, 来决定如何scale。
-
-Custom Metric APIServer 的实现其实是一个Prometheus 的Adaptor，会去Prometheus中读取某个Pod/Servicce的具体指标值。比如，http request的请求率。
-
-Prometheus 通过 ServiceMonitor object 配置需要监控的pod和endpoints，来确定监控哪些pod的metrics。
-
-应用需要实现/metrics， 来响应Prometheus的数据采集请求。
 
 ## 日志
 
@@ -3886,15 +3853,3 @@ spec:
 ![](https://static001.geekbang.org/resource/image/13/99/13e8439d9945fea58c9672fc4ca30799.jpg?wh=2284*705)
 在这种方案下，Kubernetes 就完全不必操心容器日志的收集了，这对于本身已经有完善的日志处理系统的公司来说，是一个非常好的选择。
 
-### 总结
-
-Kuberentes提供了三种日志收集方案：
-（1）logging agent:  pod会默认日志通过stdout/stderr输出到宿主机的一个目录，宿主机上以DaemonSet启动一个logging-agent，这个logging-agent定期将日志转存到后端。
-优势： 1对Pod无侵入 2一个node只需要一个agent 3）可以通过kubectl logs查看日志
-劣势： 必须将日志输出到stdout/stderr
-（2 sidecar模式： pod将日志输出到一个容器目录，同pod内启动一个sidecar读取这些日志输出到stdout/stderr，后续就跟方案1）一样了。
-优势：1）sidecar跟主容器是共享Volume的，所以cpu和内存损耗不大。2）可以通过kubectl logs查看日志
-劣势：机器上实际存了两份日志，浪费磁盘空间，因此不建议使用
-（3）sidercar模式2：pod将日志输出到一个容器文件，同pod内启动一个sidecar读取这个文件并直接转存到后端存储。
-优势：部署简单，宿主机友好
-劣势：1） 这个sidecar容器很可能会消耗比较多的资源，甚至拖垮应用容器。2）通过kubectl logs是看不到任何日志输出的。

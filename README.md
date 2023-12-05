@@ -1,1 +1,8 @@
-## This will be my note collection from now on
+## 笔记规则
+
+/public存放公开笔记
+/reference存放图片和私人笔记
+
+public目录分成独立的indie和系列的series笔记，其中系列的笔记来自我阅读过的书籍专栏等。
+
+笔记内容我大致分为材料material和心得takeaway两类，材料就是笔记的原材料，心得就是我对原材料的总结体会。当两者都有时，视情况而定。

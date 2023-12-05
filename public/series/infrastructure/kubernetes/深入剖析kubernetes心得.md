@@ -18,7 +18,7 @@ Dockerfile 中的每个原语执行后，都会生成一个对应的镜像层。
 
 docker容器进程可以在宿主机上看到并查看信息，故可以exec
 
-### headless service
+### headless service和clusterIP
 
 **clusterIP与headless服务的区别**
 
@@ -368,7 +368,7 @@ clusterIP只在集群中生效，实现原理：
 
 kube-proxy通过service对象的informer感知到对象创建，从而在宿主机创建iptables规则，使得访问VIP的规则被转到特定链上匹配，在链上就会用random模式来进行负载均衡，这个链是kube-proxy监听pod的变化维护的，然后会对包进行一个dnat修改vip为对应pod地址，最终访问到一个pod
 
-在 DNAT 规则之前，iptables 对流入的 IP 包还设置了一个“标志”（–set-xmark）
+在 DNAT 规则之前，iptables 对通过service访问pod的 IP 包还设置了一个“标志”（–set-xmark）
 
 ##### ipvs实现
 
@@ -384,3 +384,175 @@ ipvs只负责负载均衡和代理，其余还是由iptables负责
 
 原理：kube-proxy在每台宿主机新增iptables规则，将访问端口的包转到对应service的链上，后面就和访问clusterIP一样了，但是在发给pod之前会对包做snat，将client的源IP地址改成这台宿主机上的 CNI 网桥地址，或者宿主机本身的 IP 地址（如果 CNI 网桥不存在的话），这是为了防止client发给一个节点但是被另一个节点回复，可能会报错，所以snat之后相当于一个中间代理
 
+必须有设置标志的包才会做snat，这就是为什么clusterIP会在dnat前对包设置标志，防止正常的包被影响
+
+想要看到client的真实地址，设置nodeport的`spec.externalTrafficPolicy`字段为local会将请求只发给本节点的pod，如果该节点没有对应pod就会drop掉
+
+nodeport可以理解为clusterIP的改版，可以直接通过endpoint管理pod的访问，不需要中间再多一层clusterIP，其中nodePort为宿主机开放端口，targetPort为pod的端口，port为VIP的端口，可以通过两种方式访问：
+1. 集群内访问，与clusterIP一样，VIP:port --> podIP:targetPort
+2. 集群外访问，nodeIP:nodePort --> podIP:targetPort
+
+##### loadbalancer
+
+我的理解就是clusterIP，但是多了个可以在外部访问到的IP
+
+##### externalName
+
+ExternalName 类型的 Service，其实是在 `kube-dns` 里为你添加了一条 `CNAME` 记录
+
+访问集群内部service的域名就会被解析成externalname的域名，这样主要是便于迁移应用到集群，**这是从集群内部访问外部的方法，与externalIP不同**
+
+ExternalName用处在于`迁移外部服务到k8s`:
+1. 如 有app01、pythonSvr 两个服务; 预计将两者都迁移到 k8s中;
+2. app01 先迁移, 预计pythonSvr 不久之后也迁移:
+我们先修改app01 的配置，让其访问pythonSvr 不再通过 pythonSvr.example.com; 而是通过 pythonSvr.default.svc.cluster.local;
+3. 我们此时创建一个 ExternalName类型的 Service,将 pythonSvr.default.svc.cluster.local 指向外部的 pythonSvr.example.com;
+4. pythonSvr 迁移完成后，我们修改c中创建的Service，修改其配置类型为 ClusterIP;
+5. app01 的配置不需要动，也无需重启，因为他一开始访问的域名 pythonSvr.default.svc.cluster.local 就是对的;
+
+##### externalIP
+
+externalIP是从外部访问集群内部的方法，没有loadbalancer的负载均衡作用，需要确保从该IP可以路由到集群地址，且这个功能需要云服务厂商来实现
+
+#### ingress
+
+一个loadbalancer只能服务一个service，需要有一个全局的负载均衡和代理，通过url来请求不同的service，所以需要ingress来反向代理，而ingress本身无法实现外部访问集群内部，需要搭配loadbalancer或者nodeport
+
+**ingress只能使用域名而不能使用IP地址**，因为ingress的IP地址就是ingress controller创建的pod的IP，这个IP地址不稳定、不易于管理，使用域名可以规避这个问题
+
+Nginx、HAProxy、Envoy、Traefik 等，都已经为 Kubernetes 专门维护了对应的 Ingress Controller
+
+nginx ingress controller：
+
+作为一个deployment部署，监听ingress对象和ingress管理的service对象，生成nginx配置文件，创建nginx服务，ingress更新会reload，而管理的service对象更新不需要，因为nginx lua方案实现了动态配置upstream
+
+此外可以通过configmap来自定义nginx配置，利用标签该config被controller读取，添加到nginx配置中
+
+**ingress实际使用原理：**
+
+创建nodeport可以暴露出去，nodeport使用label找到ingress对象对应的pod，将外部访问的流量转发给该pod，pod内部的nginx接受到请求再进行反向代理，发给对应的service，再传给应用pod
+
+### 资源调度-略
+
+#### 总结
+
+调度器的作用就是为Pod寻找一个合适的Node。
+
+调度过程：待调度Pod被提交到apiServer -> 更新到etcd -> 调度器Watch etcd感知到有需要调度的pod（Informer） -> 取出待调度Pod的信息 ->Predicates： 挑选出可以运行该Pod的所有Node  ->  Priority：给所有Node打分 -> 将Pod绑定到得分最高的Node上 -> 将Pod信息更新回Etcd -> node的kubelet感知到etcd中有自己node需要拉起的pod -> 取出该Pod信息，做基本的二次检测（端口，资源等） -> 在node 上拉起该pod 。
+
+Predicates阶段会有很多过滤规则：比如volume相关，node相关，pod相关
+Priorities阶段会为Node打分，Pod调度到得分最高的Node上，打分规则比如： 空余资源、实际物理剩余、镜像大小、Pod亲和性等
+
+Kuberentes中可以为Pod设置优先级，高优先级的Pod可以： 1、在调度队列中先出队进行调度 2、调度失败时，触发抢占，调度器为其抢占低优先级Pod的资源。
+
+Kuberentes默认调度器有两个调度队列：
+activeQ：凡事在该队列里的Pod，都是下一个调度周期需要调度的
+unschedulableQ:  存放调度失败的Pod，当里面的Pod更新后就会重新回到activeQ，进行“重新调度”
+
+默认调度器的抢占过程： 确定要发生抢占 -> 调度器将所有节点信息复制一份，开始模拟抢占 ->  检查副本里的每一个节点，然后从该节点上逐个删除低优先级Pod，直到满足抢占者能运行 -> 找到一个能运行抢占者Pod的node -> 记录下这个Node名字和被删除Pod的列表 -> 模拟抢占结束 -> 开始真正抢占 -> 删除被抢占者的Pod，将抢占者调度到Node上 
+
+
+### gpu
+
+gpu支持的目标就是pod的配置中声明使用gpu就可以调度到相应节点，容器中挂载`GPU设备`以及`GPU驱动目录`
+
+Kubernetes 在 Pod 的 API 对象里，并没有为 GPU 专门设置一个资源类型字段，而是使用了一种叫作 `Extended Resource`（ER）的特殊字段来负责传递 GPU 的信息
+
+在 Kubernetes 中，对所有硬件加速设备进行管理的功能，都是由一种叫作 `Device Plugin` 的插件来负责的。
+
+device plugin通过grpc与kubelet通信，使用listandwatch机制定期向kubelet汇报该node上gpu情况，kubelet拿到后在和apiserver的心跳中传递gpu数量，在node对象中进行gpu数量更新，最后调度器纳入考虑
+
+调度成功后，kubelet会发现pod请求gpu，kubelet就会调用device plugin的allocate接口，device plugin根据自己维护的gpu信息拿到`GPU设备`以及`GPU驱动目录`，这些信息由kubelet传递给cri，最后docker进行挂载
+
+#### gpu 总结
+
+Kuberentes通过Extended Resource来支持自定义资源，比如GPU。为了让调度器知道这种自定义资源在各Node上的数量，需要的Node里添加自定义资源的数量。实际上，这些信息并不需要人工去维护，所有的硬件加速设备的管理都通过Device Plugin插件来支持，也包括对该硬件的Extended Resource进行汇报的逻辑。
+
+Device Plugin 、kubelet、调度器如何协同工作：
+
+汇报资源： Device Plugin通过gRPC与本机kubelet连接 ->  Device Plugin定期向kubelet汇报设备信息，比如GPU的数量 -> kubelet 向APIServer发送的心跳中，以Extended Reousrce的方式加上这些设备信息，比如GPU的数量 
+
+调度： Pod申明需要一个GPU -> 调度器找到GPU数量满足条件的node -> Pod绑定到对应的Node上 -> kubelet发现需要拉起一个Pod，且该Pod需要GPU -> kubelet向 Device Plugin 发起 Allocate()请求 -> Device Plugin根据kubelet传递过来的需求，找到这些设备对应的设备路径和驱动目录，并返回给kubelet -> kubelet将这些信息追加在创建Pod所对应的CRI请求中 -> 容器创建完成之后，就会出现这个GPU设备（设备路径+驱动目录）-> 调度完成
+
+### kubelet
+
+![](/reference/pic/kubelet.webp)
+
+kubelet工作核心是一个控制循环，kubelet启动就会注册各种事件的informer，驱动的事件如下：
+1. Pod 更新事件；
+2. Pod 生命周期变化；
+3. kubelet 本身设置的执行周期；
+4. 定时的清理事件。
+
+除了`syncloop`这个大循环，kubelet还维护很多子控制循环，一般被称作某某 Manager，比如 Volume Manager、Image Manager、Node Status Manager
+
+syncloop如何根据pod的变化来进行容器操作呢？
+
+kubelet会通过watch机制监听pod对象的变化，过滤条件是nodeName是当前节点，将pod信息存在缓存中，当有pod调度到当前节点，就会根据内存的pod状态判断这是新调度的pod，从而触发handler实现ADD逻辑，具体就是启动新的goroutine处理
+
+如果是ADD事件，那么kubelet就会为pod生成status，检查需要的volume是否准备好等等，然后调用cri创建容器
+
+kubelet不会直接调用docker，而是通过cri的grpc接口间接执行
+
+### cri
+
+举个例子。CNCF 里的 containerd 项目，就可以提供一个典型的 CRI shim 的能力，即：将 Kubernetes 发出的 CRI 请求，转换成对 containerd 的调用，然后创建出 `runC` 容器。而 runC 项目，才是负责执行我们前面讲解过的设置容器 Namespace、Cgroups 和 chroot 等基础操作的组件。
+
+CRI 设计的一个重要原则，就是确保这个接口本身，只关注容器，不关注 Pod，因为pod是kubernetes的概念，而容器运行时没有
+
+除了对容器生命周期的实现之外，CRI shim 还有一个重要的工作，就是如何实现 exec、logs 等接口。这些接口跟前面的操作有一个很大的不同，就是这些 gRPC 接口调用期间，kubelet 需要跟容器项目维护一个长连接来传输数据。这种 API，称之为 `Streaming API`。
+
+![](/reference/pic/streamingapi.webp)
+
+kubectl exec会先请求apiserver，apiserver调用kubelet，kubelet调用cri shim，cri shim会先返回url指向自己启动的streaming server，apiserver就会重定向与streaming server建立连接
+
+### 监控
+
+#### metrics server
+
+- 第一种 Metrics，是宿主机的监控数据。node exporter
+- 第二种 Metrics，是来自于 Kubernetes 的 API Server、kubelet 等组件的 /metrics API。
+- 第三种 Metrics，是 Kubernetes 相关的监控数据。通过metrics server这个扩展能力。这其中包括了 Pod、Node、容器、Service 等主要 Kubernetes 核心概念的 Metrics。其中容器相关的 Metrics 主要来自于 kubelet 内置的 cAdvisor 服务
+
+Metrics Server 在 Kubernetes 社区的定位，其实是用来取代 Heapster 这个项目的。
+
+metrics server的api接口的数据来自于kubelet的summary api即`kubelet_ip:kubelet_port/stats/summary`，Summary API 返回的信息，既包括了 cAdVisor 的监控数据，也包括了 kubelet 本身汇总的信息。
+
+当 Kubernetes 的 API Server 开启了 Aggregator 模式之后，你再访问 apis/metrics.k8s.io/v1beta1 的时候，实际上访问到的是一个叫作 kube-aggregator 的代理。而 kube-apiserver，正是这个代理的一个后端；而 Metrics Server，则是另一个后端。
+
+### hpa
+
+#### custom metrics apiserver
+
+在过去的很多 PaaS 项目中，其实都有一种叫作 Auto Scaling，即自动水平扩展的功能。只不过，这个功能往往只能依据某种指定的资源类型执行水平扩展，比如 CPU 或者 Memory 的使用值。
+
+而在真实的场景中，用户需要进行 Auto Scaling 的依据往往是自定义的监控指标。比如，某个应用的等待队列的长度，或者某种应用相关资源的使用情况。
+
+Kubernetes 的自动扩展器组件 Horizontal Pod Autoscaler （HPA）， 也可以直接使用 Custom Metrics 来执行用户指定的扩展策略
+
+Kubernetes 里的 Custom Metrics 机制，也是借助 Aggregator APIServer 扩展机制来实现的。当你把 Custom Metrics APIServer 启动之后，Kubernetes 里就会出现一个叫作custom.metrics.k8s.io的 API。而当你访问这个 URL 时，Aggregator 就会把你的请求转发给 Custom Metrics APIServer 。
+
+实现hpa根据httprequest数量进行缩扩容，让hpa监听对应custom.metrics.k8s.io的 API，Custom Metrics APIServer会去Prometheus中查询对应指标，而这个指标是pod上软件暴露出来的
+
+#### hpa 总结
+
+HPA 通过 HorizontalPodAutoscaler 配置要访问的 Custom Metrics, 来决定如何scale。
+
+Custom Metric APIServer 的实现其实是一个Prometheus 的Adaptor，会去Prometheus中读取某个Pod/Servicce的具体指标值。比如，http request的请求率。
+
+Prometheus 通过 ServiceMonitor object 配置需要监控的pod和endpoints，来确定监控哪些pod的metrics。
+
+应用需要实现/metrics， 来响应Prometheus的数据采集请求。
+
+### 日志
+
+Kuberentes提供了三种日志收集方案：
+- logging agent:  pod会默认日志通过stdout/stderr输出到宿主机的一个目录，宿主机上以DaemonSet启动一个logging-agent，这个logging-agent定期将日志转存到后端。
+优势： 1. 对Pod无侵入 2. 一个node只需要一个agent 3. 可以通过kubectl logs查看日志
+劣势： 必须将日志输出到stdout/stderr
+- sidecar模式： pod将日志输出到一个容器目录，同pod内启动一个sidecar读取这些日志输出到stdout/stderr，后续就跟方案1一样了。
+优势：1. sidecar跟主容器是共享Volume的，所以cpu和内存损耗不大。2. 可以通过kubectl logs查看日志
+劣势：机器上实际存了两份日志，浪费磁盘空间，因此不建议使用
+- sidercar模式2：pod将日志输出到一个容器文件，同pod内启动一个sidecar读取这个文件并直接转存到后端存储。
+优势：部署简单，宿主机友好
+劣势：1. 这个sidecar容器很可能会消耗比较多的资源，甚至拖垮应用容器。2. 通过kubectl logs是看不到任何日志输出的。
