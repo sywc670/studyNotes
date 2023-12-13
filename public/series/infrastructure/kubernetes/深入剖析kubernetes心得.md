@@ -394,7 +394,7 @@ nodeport可以理解为clusterIP的改版，可以直接通过endpoint管理pod�
 
 ##### loadbalancer
 
-我的理解就是clusterIP，但是多了个可以在外部访问到的IP
+我的理解就是nodeport，但是多了个可以在外部访问到的IP
 
 ##### externalName
 
@@ -416,9 +416,9 @@ externalIP是从外部访问集群内部的方法，没有loadbalancer的负载�
 
 #### ingress
 
-一个loadbalancer只能服务一个service，需要有一个全局的负载均衡和代理，通过url来请求不同的service，所以需要ingress来反向代理，而ingress本身无法实现外部访问集群内部，需要搭配loadbalancer或者nodeport
+一个loadbalancer只能服务一个service，需要有一个全局的负载均衡和代理，通过url来请求不同的service，所以需要ingress来反向代理，而**ingress本身无法实现外部访问集群内部，需要搭配loadbalancer或者nodeport**，搭配loadbalancer才会出现address字段下的IP
 
-**ingress只能使用域名而不能使用IP地址**，因为ingress的IP地址就是ingress controller创建的pod的IP，这个IP地址不稳定、不易于管理，使用域名可以规避这个问题
+**ingress只能使用域名而不能使用IP地址**，因为ingress的IP地址就是ingress controller这个pod的IP，这个IP地址不稳定、不易于管理，使用域名可以规避这个问题？
 
 Nginx、HAProxy、Envoy、Traefik 等，都已经为 Kubernetes 专门维护了对应的 Ingress Controller
 
@@ -426,11 +426,13 @@ nginx ingress controller：
 
 作为一个deployment部署，监听ingress对象和ingress管理的service对象，生成nginx配置文件，创建nginx服务，ingress更新会reload，而管理的service对象更新不需要，因为nginx lua方案实现了动态配置upstream
 
+controller本身是一个pod，包含了监听对象的容器和nginx的容器
+
 此外可以通过configmap来自定义nginx配置，利用标签该config被controller读取，添加到nginx配置中
 
 **ingress实际使用原理：**
 
-创建nodeport可以暴露出去，nodeport使用label找到ingress对象对应的pod，将外部访问的流量转发给该pod，pod内部的nginx接受到请求再进行反向代理，发给对应的service，再传给应用pod
+创建nodeport可以暴露出去，nodeport使用label找到ingress controller的pod，将外部访问的流量转发给该pod，pod内部的nginx接受到请求再进行反向代理，不会将请求发给对应的service，而是直接传给对应pod，即使ingress后面是nodeport，也不会进行常规nodeport会使用到的snat从而保留clientIP
 
 ### 资源调度-略
 
