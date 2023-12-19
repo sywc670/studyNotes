@@ -394,7 +394,7 @@ nodeport可以理解为clusterIP的改版，可以直接通过endpoint管理pod�
 
 ##### loadbalancer
 
-我的理解就是nodeport，但是多了个可以在外部访问到的IP
+我的理解就是nodeport，但是多了个可以在外部访问到的IP，这个IP类似于float IP
 
 ##### externalName
 

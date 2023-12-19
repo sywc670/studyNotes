@@ -61,6 +61,26 @@ kubelet一般从apiserver读取到yaml然后部署pod，但也可以从本地读
 
 容器设置/etc/resolv.conf的nameserver为kube-dns的service VIP，该service背后的pod就是dns服务器，且使用watch机制监听apiserver，更新dns条目，**但该更新不会瞬间完成，更新未完成时不会生效**
 
+### kube-proxy
+
+容器的IP地址段在一个集群中必须是唯一的，不能重复
+
+kube-proxy会watch service和endpoint对象，调整iptables
+
+### 高可用
+
+#### 应用高可用
+
+使用deployment来管理pod，但是pod fail之后还是会有downtime
+
+可以不在代码中进行选主的操作，而使用sidecar的方式，将leader-election放在外部。
+
+leader-election可以是leader负责所有工作，worker待命；也可以是leader负责写，worker只能读。
+
+#### 控制平面高可用
+
+
+
 ### quotas
 
 ## material
