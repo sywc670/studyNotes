@@ -34,3 +34,23 @@ cat url-list.txt | xargs wget -c # 多行下载
 xargs -n 1 bash -c
 # 输入的每一条命令都执行一遍
 ```
+
+## 搜索文件和文件夹大小 
+
+统计当前目录大小
+du -h --max-depth=1
+`du -h -d 1`
+
+在当前目录中要搜索大小超过100MB的文件
+`sudo find . -xdev -type f -size +100M`
+
+传递find命令的输出到ls ，ls将打印已找到的每个文件的大小，然后将输出传递给sort命令，以根据文件大小对其进行排序
+`find . -xdev -type f -size +100M -print | xargs ls -lh | sort -k5,5 -h -r`
+
+打印占用最大磁盘空间的目录
+`du -ahx . | sort -rh | head -5`会有重复情况
+du -ahx .：估算当前目录（.）中的磁盘空间使用情况，包括文件和目录（a），以可读格式打印大小（h）并跳过不同文件系统上的目录（x）
+
+加上x可以极大加速搜索时间
+
+https://www.myfreax.com/find-large-files-in-linux/

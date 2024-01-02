@@ -85,6 +85,16 @@ AD(active directory)**活动目录**,动态的建立整个域模式网络中的�
 
 在工作组模式下，网络中的用户、资源和权限这些内容都是由每台计算机的使用者自行管理的。域不同。
 
+#### DN
+
+标识名称（distinguished Name，DN）：它是对象在活动目录内的完整路径，DN 有三个属性，分别是 CN，OU，DC。OU和DC可以有多个。
+
+DC (Domain Component)：域名组件，表示 DNS 域名中的组件（如：coffeeMilk.com中的`[coffee]`和`[com]`）；
+
+OU (Organizational Unit)：组织单位；OU就是分组。
+
+CN (Common Name)：通用名称，一般为用户名或计算机名；
+
 ### LDAP
 
 LDAP（Light Directory Access Portocol），它是基于X.500标准的轻量级目录访问协议。
@@ -94,3 +104,21 @@ LDAP（Light Directory Access Portocol），它是基于X.500标准的轻量级�
 目录数据库和关系数据库不同，它**有优异的读性能，但写性能差**，并且没有事务处理、回滚等复杂功能，不适于存储修改频繁的数据。所以目录天生是用来查询的，就好象它的名字一样。
 
 LDAP目录服务是由目录数据库和一套访问协议组成的系统。
+
+[LDAP服务端客户端搭建-未记录](https://blog.csdn.net/Eng_ingLi/article/details/131574784)
+
+### /etc/nsswitch.conf
+
+/etc/nsswitch.conf文件的配置语法为“database: source”，其中database表示要检索的数据库类型，source表示检索顺序。源可以是“files”（从文件中检索）、“dns”（从DNS服务器中检索）、“nis”（从NIS服务器中检索）等。
+
+### NIS
+
+NIS是一种用于跨网络进行身份验证和用户信息管理的服务，最初由Sun Microsystems开发。它基于客户端-服务器架构，使用了关系数据库来存储用户信息。NIS使用了传统的基于文本文件的配置，包括/etc/passwd、/etc/group和/etc/hosts等。
+
+NIS主要用于UNIX/Linux系统，特别是传统的基于文本文件的配置。它在网络中传播用户和组信息，并提供了集中管理的用户身份验证。它适用于小型、简单的网络环境，但随着网络规模的增长，性能和安全性可能会成为问题。
+
+### CDN
+
+CDN技术原理是在各地建立缓存服务器，分担源服务器的流量，加速本地访问速度。
+
+CDN的访问过程依赖于**DNS的重定向技术**，即将用户定向至地理位置上距离其最近的边缘CDN节点服务器上。用户首先向根DNS服务器发送域名解析请求，根DNS服务器向授权DNS服务器发送域名解析请求，请求中包含了根服务器的IP地址，当域名解析服务器/根DNS服务器接受到一个CNAME类的DNS记录，域名解析服务器会重定向到CDN节点网络层中的**智能CDN域名服务器**上，CDN域名服务器将进行一系列的智能解析操作，根据**本地DNS域名解析服务器的IP地址**，分析各个网络线路的拥堵情况和负载情况，将最适合的CDN节点服务器IP地址返还给根DNS服务器，用户接受到CDN节点的IP地址后，直接向CDN节点服务器发送请求获取网站内容。

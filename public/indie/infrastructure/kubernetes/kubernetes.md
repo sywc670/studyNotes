@@ -1,5 +1,3 @@
-## material
-
 ### GPU共享
 
 [GPU-sharing](https://towardsdatascience.com/how-to-increase-gpu-utilization-in-kubernetes-with-nvidia-mps-e680d20c3181)
@@ -39,8 +37,6 @@ kubectl kustomize (dir)
 
 kubectl apply -k (dir)
 
-## takeaway
-
 #### GVK
 
 [ref](https://iximiuz.com/en/posts/kubernetes-api-structure-and-terminology/#:~:text=Every%20resource%20representation%20follows%20a,representing%20a%20record%20of%20intent.)
@@ -74,3 +70,42 @@ Most of the Kubernetes API resources represent `Objects`. Unlike other forms of 
 Additionally, the metadata dictionary may include labels and annotations fields, as well as some versioning and timestamp information.
 
 >Fun fact - **The `kubectl api-resources` command actually lists not API resources but known types of Kubernetes Objects**. To list the true API resources instead, you'd need to run through a full discovery cycle querying every path returned by kubectl get --raw / recursively.
+
+### Server Side Apply and Client Side Apply
+
+[ref](https://blog.csdn.net/qq_43684922/article/details/128272461)
+
+kubectl最初方式就是client side apply，自动填充kubectl.kubernetes.io/last-applied-configuration
+
+kubectl apply时会判断该对象存不存在，使用patch或者create，也会**根据last-applied-configuration来判断哪些字段是被kubectl管理的**。
+
+![](../../../../reference/pic/csa.png)
+
+server side apply示例：
+
+```shell
+kubectl apply --server-side=true -f - <<EOF
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-server-side-apply
+data:
+  a: "a"
+  b: "b"
+EOF
+
+kubectl apply --server-side=true --field-manager="test" -f - <<EOF
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-server-side-apply
+data:
+  a: "a"
+  b: "c" 
+EOF
+# conflict
+```
+
+失去 last-applied-configuration 后，表达 ownership 的任务就落入了新引入的字段管理机制（field management）手中。根据以上输出的 yaml 的 metadata.managedFields 字段，我们不难得出它想表达的含义：该 configmap 中 data.a 和 data.b 字段都是由 kubectl 来管理的。
+
+ssa的优点是更细粒度的管理，并且csa是深度绑定kubectl的，ssa可以让其他组件通过client-go包也实现apply机制
