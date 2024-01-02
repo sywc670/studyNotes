@@ -1,8 +1,16 @@
 ### prometheus operator
 
-prometheus operator会根据prometheus、alertmanager、servicemonitor这些cr来新建对应的实例
+[ref](https://yunlzheng.gitbook.io/prometheus-book/part-iii-prometheus-shi-zhan/operator/what-is-prometheus-operators)
 
-如何给operator配置拿到相关指标？通过servicemonitor对象
+prometheus operator会根据prometheus、alertmanager、servicemonitor这些cr来新建对应的实例，这些cr本身不会有任何作用，只是yaml配置，而operator会根据这些配置来启动prometheus\alertmanager实例，也就是**statefulset形式启动的pod**。
+
+![](../../../reference/pic/prometheus-architecture.png)
+
+Prometheus Operator目前提供的️4类资源：
+- Prometheus：声明式创建和管理Prometheus Server实例；
+- ServiceMonitor：负责声明式的管理监控配置；
+- PrometheusRule：负责声明式的管理告警配置；
+- Alertmanager：声明式的创建和管理Alertmanager实例。
 
 #### 方案
 

@@ -37,8 +37,17 @@ xargs -n 1 bash -c
 
 ## 搜索文件和文件夹大小 
 
+`sudo du -ahxd 1 .` 
+一级一级查看哪个文件或目录占用最大
+
+`du -ahx . | sort -rh | head -5` 
+快速排查哪个文件或目录占用最大
+
+`find . -xdev -type f -size +100M -print | xargs ls -lh | sort -k5,5 -h -r` 
+在当前目录搜索并对文件大小排序，适用于找到对应目录后大文件很多情况，看不到目录内部大小
+
 统计当前目录大小
-du -h --max-depth=1
+`du -h --max-depth=1`
 `du -h -d 1`
 
 在当前目录中要搜索大小超过100MB的文件
@@ -54,3 +63,9 @@ du -ahx .：估算当前目录（.）中的磁盘空间使用情况，包括文�
 加上x可以极大加速搜索时间
 
 https://www.myfreax.com/find-large-files-in-linux/
+
+## shell求值
+
+`<()`是将命令的输出作为临时文件名传给其他命令，`$()`是将命令的输出作为字符串传给其他命令
+
+比如bash就需要`<()`，bash -c需要`$()`

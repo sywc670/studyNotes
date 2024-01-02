@@ -1102,7 +1102,7 @@ Gin 在绑定参数时，是通过结构体的 tag 来判断要绑定哪类参�
 - HTTP 头参数：header。
 - 消息体参数：会根据 Content-Type，自动选择使用 json 或者 xml，也可以调用 ShouldBindJSON 或者 ShouldBindXML 直接指定使用哪个 tag。
 
->表单参数是在body里传输的，会标注Content-Type为表单
+**表单参数是在body里传输的，会标注Content-Type为表单**
 
 Gin 提供的函数可以获取 5 个类别的 HTTP 参数。
 
