@@ -1,7 +1,5 @@
 # helm
 
-## material
-
 ![](../../../../reference/pic/helm-struct.webp)
 
 ### helm安装
@@ -71,8 +69,6 @@ Helm会尝试加载CRD目录中 所有的 文件到Kubernetes。
 - CRD从不会在升级或回滚时安装。Helm只会在安装时创建CRD。
 - CRD从不会被删除。自动删除CRD会删除集群中所有命名空间中的所有CRD内容。因此Helm不会删除CRD。
 
-## takeaway
-
 ### helm解决的问题
 
 一个应用包含多个服务，每个服务都有各自的配置，当在不同的环境下需要不同的配置时，传统方案很难优雅解决，只能繁琐的为每个服务编写文件并各自维护。
@@ -80,6 +76,8 @@ Helm会尝试加载CRD目录中 所有的 文件到Kubernetes。
 helm由模板+配置组成，可以灵活的根据环境进行配置
 
 ### helm模板使用
+
+[helm模板入门](https://juejin.cn/post/6844904199818313735)
 
 include和template不同，template引入一个模板，include通常是引入部分
 
@@ -100,4 +98,31 @@ with可以限制上下文范围
 {{ end }}
 ```
 
-toYaml将值转换成字符串，nindent和indent区别在nested
+toYaml将值转换成yaml格式的字符串，通常配上indent来插入一段yaml到template中，nindent和indent方法类似，不过nindent会在最开始的地方增加一个空行
+
+双括号内的-代表消除空格，{{- end -}}消除左右两边的空格，会延伸到下一行
+
+template/ 中的大多数文件都被视为Kubernetes资源清单(会被发往Kubernetes创建对应资源)，NOTES.txt是个例外，名称以下划线（_） 开头的文件不会被当做资源发往Kubernetes，但是可以被其他模板所引用。
+
+### chartmuseum
+
+私有chart仓库
+
+cm-push是一个用来将 chart 推送到 ChartMuseum 的插件
+
+```shell
+helm plugin install https://github.com/chartmuseum/helm-push
+
+docker run --rm -it \
+  -p 8080:8080 \
+  -e DEBUG=1 \
+  -e STORAGE=local \
+  -e BASIC_AUTH_USER=admin \
+  -e BASIC_AUTH_PASS=password \
+  -e TLS_CERT=/charts/cm.crt \
+  -e TLS_KEY=/charts/cm.key \
+  -e STORAGE_LOCAL_ROOTDIR=/charts \
+  -v $(pwd)/charts:/charts \
+  ghcr.io/helm/chartmuseum:v0.14.0
+
+```  

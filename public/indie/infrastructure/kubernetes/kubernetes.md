@@ -109,3 +109,77 @@ EOF
 失去 last-applied-configuration 后，表达 ownership 的任务就落入了新引入的字段管理机制（field management）手中。根据以上输出的 yaml 的 metadata.managedFields 字段，我们不难得出它想表达的含义：该 configmap 中 data.a 和 data.b 字段都是由 kubectl 来管理的。
 
 ssa的优点是更细粒度的管理，并且csa是深度绑定kubectl的，ssa可以让其他组件通过client-go包也实现apply机制
+
+### kubectl 多集群管理凭证
+
+```shell
+KUBECONFIG=config1:config2 kubectl config view --flatten > ~/.kube/config
+# KUBECONFIG的config不可以直接使用~/.kube/config，会读取不到文件
+```
+
+### pod dns
+
+hostAliases可以设置pod `/etc/hosts`文件内容
+
+### dnsPolicy配置
+
+ClusterFirst：通过CoreDNS来做域名解析，Pod内`/etc/resolv.conf`配置的DNS服务地址是集群DNS服务的kube-dns地址。
+
+None：忽略集群DNS策略，需要您提供dnsConfig字段来指定DNS配置信息。
+
+Default：Pod直接继承集群节点的域名解析配置。即在ACK集群直接使用ECS的/etc/resolv.conf文件（文件内配置的是阿里云DNS服务）。
+
+ClusterFirstWithHostNet：强制在hostNetWork网络模式下使用ClusterFirst策略（默认使用Default策略）。
+
+### kubernetes 常用临时镜像命令
+
+#### mysql-client
+
+```shell
+#写操作测试
+kubectl run mysql-client --image=mysql:5.7 -i --rm --restart=Never -- \
+  mysql -h mysql-0.mysql <<EOF
+CREATE DATABASE test;
+CREATE TABLE test.messages (message VARCHAR(250));
+INSERT INTO test.messages VALUES ('hello');
+EOF
+#读操作
+kubectl run mysql-client --image=mysql:5.7 -i --rm --restart=Never --  mysql -h mysql-read -e "SELECT * FROM test.messages"
+```
+
+#### curl
+
+kubectl run -i --tty --image curlimages/curl curl --restart=Never --rm curl web-0.nginx
+
+在pod中使用curl访问apiserver
+```shell
+kubectl run kubectl-proxy --image=luksa/kubectl-proxy 
+kubectl exec -it kubectl-proxy -- curl http://127.0.0.1:8001/api/v1/namespaces/default/services
+```
+
+#### DNS查询
+
+```
+kubectl run -i --tty --image busybox:1.28.4 busybox --restart=Never --rm /bin/sh 
+
+kubectl run -it srvlookup --image=tutum/dnsutils --rm --restart=Never -- dig SRV kubia.default.svc.cluster.local
+``` 
+#### mysql客户端连接
+
+```shell
+kubectl run mysql-client --image=mysql:5.7 -i --rm --restart=Never --\
+  mysql -h mysql-0.mysql <<EOF
+CREATE DATABASE test;
+CREATE TABLE test.messages (message VARCHAR(250));
+INSERT INTO test.messages VALUES ('hello');
+EOF
+```
+#### 使用hey增加访问压力
+
+```
+$ # Install hey
+$ docker run -it -v /usr/local/bin:/go/bin golang:1.8 go get github.com/rakyll/hey
+
+$ export APP_ENDPOINT=$(kubectl get svc sample-metrics-app -o template --template {{.spec.clusterIP}}); echo ${APP_ENDPOINT}
+$ hey -n 50000 -c 1000 http://${APP_ENDPOINT}
+```

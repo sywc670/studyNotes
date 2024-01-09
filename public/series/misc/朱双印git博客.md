@@ -120,7 +120,7 @@ git reset HEAD -- f2
 
 我们可以用一张表格来总结git reset命令的不同选项影响的区域，如下表所示：
 
- 	工作区	索引	HEAD
+ 	工作区	索引(暂存区)	HEAD
 –soft	否	否	是
 –mixed	否	是	是
 –hard	是	是	是

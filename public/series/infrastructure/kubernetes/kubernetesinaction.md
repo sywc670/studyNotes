@@ -1,23 +1,10 @@
 # kubernetes in action
 
-## takeaway
-
 ### 获取集群组件状态
 
 `kubectl get componentstatuses`被废弃了，可以改用`curl -k https://localhost:6443/livez?verbose`，或者`kubectl get --raw='/readyz?verbose'`
 
 healthz接口被废弃，readyz和livez接口可以互换使用
-
-### kubernetes组件高可用
-
-etcd和apiserver可以多个同时运行，但是scheduler、controller manager无法多个同时运行，同一时间只能一个运行，其余处于standby模式
-
-etcd使用raft来保证多数的节点可以有决定权
-
-```shell
-# 获取pod并以特定格式显示
-kubectl get po -o custom-columns=POD:metadata.name,NODE:spec.nodeName --sort-by spec.nodeName -n kube-system
-```
 
 ### apiserver做了什么
 
@@ -79,8 +66,15 @@ leader-election可以是leader负责所有工作，worker待命；也可以是le
 
 #### 控制平面高可用
 
+etcd和apiserver可以多个同时运行，但是scheduler、controller manager无法多个同时运行，同一时间只能一个运行，其余处于standby模式，这个机制是组件自己已经实现的，选举选项是默认打开的
 
+etcd使用raft来保证多数的节点可以有决定权
+
+apiserver是stateless的，一种部署方案就是apiserver只和本地的etcd进行通信，为了确保apiserver高可用，可以在前面加入loadbalancer
+
+```shell
+# 获取pod并以特定格式显示
+kubectl get po -o custom-columns=POD:metadata.name,NODE:spec.nodeName --sort-by spec.nodeName -n kube-system
+```
 
 ### quotas
-
-## material
