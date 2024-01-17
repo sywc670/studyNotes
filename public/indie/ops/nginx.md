@@ -14,6 +14,23 @@
 
 ![](../../../reference/pic/nginxrequesttime.png)
 
+### map
+
+其实就相当于一个switch
+```
+map $variable $new_variable {
+    key1 value1;
+    key2 value2;
+    key3 value3;
+    ...
+    default default_value;
+}
+```
+
+### try_files
+
+其实就是我们不确定用户访问的路径或者文件存不存在，这时可以按照 try_files 指定的顺序来展示指定的 URI ，通常它都会和 $uri 变量一起搭配使用，$uri 变量就是当前访问的 location 地址。说白了，就是给请求的链接准备好备胎，能够为用户带来更优良的用户体验。
+
 ### 限流设置
 
 [ref](https://blog.csdn.net/goGoing_/article/details/130634946)

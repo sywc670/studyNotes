@@ -183,3 +183,13 @@ $ docker run -it -v /usr/local/bin:/go/bin golang:1.8 go get github.com/rakyll/h
 $ export APP_ENDPOINT=$(kubectl get svc sample-metrics-app -o template --template {{.spec.clusterIP}}); echo ${APP_ENDPOINT}
 $ hey -n 50000 -c 1000 http://${APP_ENDPOINT}
 ```
+
+### ingress nginx controller
+
+[ref](https://kubernetes.github.io/ingress-nginx/)
+
+### kubernetes镜像源
+
+registry.aliyuncs.com/google_containers
+
+registry.cn-hangzhou.aliyuncs.com/acs/

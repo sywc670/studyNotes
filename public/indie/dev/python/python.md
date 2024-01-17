@@ -17,3 +17,71 @@ WSGI相当于是Web服务器和Python应用程序之间的桥梁。那么这个�
 web服务器和应用通信就通过WSGI协议，至于为什么需要这个协议？是一个功能的拆分，web框架不用实现这部分功能。
 
 >这里的web服务器是python中的一部分，不是nginx
+
+
+
+### venv 虚拟环境
+
+#### 方法一
+
+mkdir venv
+cd venv
+python3 -m venv .
+cd bin
+source activate
+deactivate
+https://www.liaoxuefeng.com/wiki/1016959663602400/1019273143120480
+
+#### 方法二
+
+sudo yum install python-devel libffi-devel gcc openssl-devel libselinux-python
+sudo yum install python-virtualenv
+mkdir /opt/virtualenv
+virtualenv /opt/virtualenv
+source /opt/virtualenv/bin/activate
+
+### pip使用国内镜像源
+
+#### 方法一
+
+我们可以直接在 pip 命令中使用 -i 参数来指定镜像地址，例如：
+pip3 install numpy -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+
+https://www.runoob.com/w3cnote/pip-cn-mirror.html
+https://mirrors.tuna.tsinghua.edu.cn/help/pypi/
+
+#### 方法二
+
+配置国内的pip源
+```
+mkdir ~/.pip
+cat << EOF > ~/.pip/pip.conf
+[global]
+index-url = https://mirrors.aliyun.com/pypi/simple/
+
+[install]
+trusted-host=mirrors.aliyun.com
+EOF
+```
+
+原文链接：https://blog.csdn.net/qq_45382565/article/details/126657144
+
+#### There was a problem confirming the ssl certificate
+临时
+pip install numpy -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn
+新建pip.ini
+```ini
+[global]
+index-url = http://mirrors.aliyun.com/pypi/simple/
+[install]
+trusted-host = mirrors.aliyun.com
+```
+https://www.cnblogs.com/yinhaiping/p/13375375.html
+
+#### pip install -U pip 升级到22版本报错
+pip install --upgrade pip==20.3.4
+或者找到对应版本的get-pip文件 手动升级。
+wget https://bootstrap.pypa.io/2.7/get-pip.py
+python get-pip.py 
