@@ -14,22 +14,7 @@
 
 ![](../../../reference/pic/nginxrequesttime.png)
 
-### map
-
-其实就相当于一个switch
-```
-map $variable $new_variable {
-    key1 value1;
-    key2 value2;
-    key3 value3;
-    ...
-    default default_value;
-}
-```
-
-### try_files
-
-其实就是我们不确定用户访问的路径或者文件存不存在，这时可以按照 try_files 指定的顺序来展示指定的 URI ，通常它都会和 $uri 变量一起搭配使用，$uri 变量就是当前访问的 location 地址。说白了，就是给请求的链接准备好备胎，能够为用户带来更优良的用户体验。
+more_set_headers 设置自定义响应头
 
 ### 限流设置
 
@@ -50,9 +35,6 @@ burst ：表示在超过设定的处理速率后能额外处理的请求数
         proxy_pass http://192.168.211.1:18081;
     }
 ```    
-指定错误码
-limit_req_status 429;
-
 ### 实现服务端获取客户端真实ip
 
 [ref](https://zhuanlan.zhihu.com/p/391215425)

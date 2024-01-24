@@ -513,7 +513,7 @@ kubectl exec会先请求apiserver，apiserver调用kubelet，kubelet调用cri sh
 #### metrics server
 
 - 第一种 Metrics，是宿主机的监控数据。node exporter
-- 第二种 Metrics，是来自于 Kubernetes 的 API Server、kubelet 等组件的 /metrics API。
+- 第二种 Metrics，是来自于 Kubernetes 的 API Server、kubelet 等组件的 `/metrics API`。
 - 第三种 Metrics，是 Kubernetes 相关的监控数据。通过metrics server这个扩展能力。这其中包括了 Pod、Node、容器、Service 等主要 Kubernetes 核心概念的 Metrics。其中容器相关的 Metrics 主要来自于 kubelet 内置的 cAdvisor 服务
 
 Metrics Server 在 Kubernetes 社区的定位，其实是用来取代 Heapster 这个项目的。
@@ -521,6 +521,8 @@ Metrics Server 在 Kubernetes 社区的定位，其实是用来取代 Heapster �
 metrics server的api接口的数据来自于kubelet的summary api即`kubelet_ip:kubelet_port/stats/summary`，Summary API 返回的信息，既包括了 cAdVisor 的监控数据，也包括了 kubelet 本身汇总的信息。
 
 当 Kubernetes 的 API Server 开启了 Aggregator 模式之后，你再访问 apis/metrics.k8s.io/v1beta1 的时候，实际上访问到的是一个叫作 kube-aggregator 的代理。而 kube-apiserver，正是这个代理的一个后端；而 Metrics Server，则是另一个后端。
+
+**hpa其实也可以使用metrics server的数据**
 
 ### hpa
 

@@ -69,3 +69,9 @@ https://www.myfreax.com/find-large-files-in-linux/
 `<()`是将命令的输出作为临时文件名传给其他命令，`$()`是将命令的输出作为字符串传给其他命令
 
 比如bash就需要`<()`，bash -c需要`$()`
+
+## 退出码
+
+Linux 程序被外界中断时会发送中断信号，程序退出时的状态码为中断信号值加128
+
+[ref](https://cloud.tencent.com/document/product/457/43125)

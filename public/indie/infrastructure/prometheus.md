@@ -14,12 +14,20 @@ Prometheus Operator目前提供的️4类资源：
 
 #### 方案
 
-- 利用cadvisor拿到容器指标
-- 通过kubelet暴露接口拿到kubelet指标 其它组件也可以
+- 通过kubelet暴露接口拿到kubelet指标/metrics 其它组件也可以
 - 通过node-exporter拿到主机指标
 - 通过blackbox-exporter拿到网络指标
-- 通过kube-state-metrics拿到k8s资源对象和组件指标
+- 通过kube-state-metrics拿到k8s资源对象和组件指标，从apiserver拿
 - 通过在软件中使用prometheus库暴露接口拿到软件自定义指标
+- metrics server从kubelet拿到指标，kubelet的summaryAPI，包含了cadvisor
+
+Kubernetes 云原生集群监控主要涉及到如下三类指标：node 物理节点指标、pod & container 容器资源指标和Kubernetes 云原生集群资源指标
+
+![](../../../reference/pic/prometheus-k8s.png)
+
+cAdvisor 是用于监控容器引擎的，由于其监控的实用性，Kubernetes 已经默认将其与 Kubelet 融合，所以我们无需再单独部署 cAdvisor 组件来暴露节点中容器运行的信息，直接使用 Kubelet 组件提供的指标采集地址即可
+
+
 
 ### relabel机制
 

@@ -77,4 +77,6 @@ apiserver是stateless的，一种部署方案就是apiserver只和本地的etcd�
 kubectl get po -o custom-columns=POD:metadata.name,NODE:spec.nodeName --sort-by spec.nodeName -n kube-system
 ```
 
-### quotas
+scheduler、controller manager的leader election：
+
+使用一个configmap标识，control-plane.alpha.kubernetes.io/leader的annotation会标识谁是leader
