@@ -8,6 +8,23 @@
 重定向：return rewrite等
 反向代理：proxy_pass
 
+### break rewrite 
+
+break是停止之后的指令执行，不管之后的return指令，直接用现有的请求uri匹配返回
+
+rewrite这个重写指令按照它们在配置文件中出现的顺序依次执行。可以使用标志终止对指令的进一步处理。如果替换字符串以“http://”、“https://”或“$scheme”开头，则处理停止并将重定向返回给客户端。
+
+可选的标志参数可以是以下之一：
+
+last ，停止处理当前的 ngx_http_rewrite_module 指令集并开始搜索与更改的 URI 匹配的新位置，解释：last不会继续执行指令，但是会继续匹配location，继续执行那个location的指令
+
+break，与 break 指令一样，停止处理当前的 ngx_http_rewrite_module 指令集，解释：break不会继续执行指令，也不再匹配location，会使用rewrite结果返回
+
+redirect，返回带有 302 代码的临时重定向；如果替换字符串不以“http://”、“https://”或“$scheme”开头，则使用该字符串
+
+permanent，返回带有 301 代码的永久重定向
+
+
 ### request_time等字段解析
 
 [ref](https://blog.csdn.net/zzhongcy/article/details/105819628)
