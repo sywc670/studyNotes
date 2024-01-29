@@ -77,6 +77,8 @@ helm由模板+配置组成，可以灵活的根据环境进行配置
 
 ### helm模板使用
 
+>While we talk about the "Helm template language" as if it is Helm-specific, it is actually a combination of the `Go template` language, some extra functions, and a variety of wrappers to expose certain objects to the templates. Many resources on Go templates may be helpful as you learn about templating.
+
 [helm模板入门](https://juejin.cn/post/6844904199818313735)
 
 include和template不同，template引入一个模板，include通常是引入部分
@@ -85,7 +87,7 @@ include和template不同，template引入一个模板，include通常是引入�
 {{ include "path/to/child.tpl" . | indent 4 }}
 ```
 
-block和define类似，block定义一个可重用块，define定义一个模板，define可以传参来重写block的定义
+block和define类似，具体见go template笔记
 
 所有的 Helm 内置变量都以大写字母开头，以便与用户定义的 value 进行区分，例如.Release.Name、.Capabilities.KubeVersion
 

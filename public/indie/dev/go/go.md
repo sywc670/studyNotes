@@ -603,8 +603,43 @@ r保存了一个(value, type)对来表示其所存储值的信息。 value即为
 - 反射第二定律：反射可以将反射对象还原成interface对象
 - 反射第三定律：反射对象可修改，value值必须是可设置的
 
-## 使用
+## 库
 
-### template
+### go template
 
 [ref](https://www.cnblogs.com/f-ck-need-u/p/10053124.html#%E5%B5%8C%E5%A5%97templatedefine%E5%92%8Ctemplate)
+
+helm模板也有用到go template，可以check下那边
+
+在template中，点"."代表当前作用域的当前对象
+
+有一个特殊变量$，它代表模板的最顶级作用域对象(通俗地理解，是以模板为全局作用域的全局变量)，在Execute()执行的时候进行赋值，且一直不变
+
+{{template "name"}}
+{{template "name" pipeline}}
+
+第一种是直接执行名为name的template，点设置为nil。第二种是点"."设置为pipeline的值，并执行名为name的template。
+
+{{range pipeline}} T1 {{end}}
+{{range pipeline}} T1 {{else}} T0 {{end}}
+
+对于第一个表达式，当迭代对象的值为0值时，则range直接跳过，就像if一样。对于第二个表达式，则在迭代到0值时执行else语句。
+
+如果range中只赋值给一个变量，则这个变量是当前正在迭代元素的值。如果赋值给两个变量，则第一个变量是索引值(map/slice是数值，map是key)，第二个变量是当前正在迭代元素的值。
+
+{{with pipeline}} T1 {{end}}
+{{with pipeline}} T1 {{else}} T0 {{end}}
+
+对于第一种格式，当pipeline不为0值的时候，点"."设置为pipeline运算的值，否则跳过。对于第二种格式，当pipeline为0值时，执行else语句块，否则"."设置为pipeline运算的值，并执行T1。
+
+block和define十分类似，根据官方文档的解释：block等价于define定义一个名为name的模板，并在"有需要"的地方执行这个模板，执行时将"."设置为pipeline的值。
+
+但应该注意，block的第一个动作是执行名为name的模板，如果不存在，则在此处自动定义这个模板，并执行这个临时定义的模板。换句话说，block可以认为是**设置一个默认模板，执行模板**。
+
+{{block "T1" .}} one {{end}}
+
+它首先表示{{template "T1" .}}，也就是说先找到T1模板，如果T1存在，则执行找到的T1，如果没找到T1，则临时定义一个{{define "T1"}} one {{end}}，并执行它。
+
+对于html/template包，有一个很好用的功能：上下文感知。text/template没有该功能。
+
+上下文感知具体指的是根据所处环境css、js、html、url的path、url的query，自动进行不同格式的转义。
