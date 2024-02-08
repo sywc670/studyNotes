@@ -3,5 +3,6 @@ deprecated/
 
 reference/*
 !reference/pic
+!reference/excalidraw
 
 yaml/

@@ -80,3 +80,84 @@ kubectl get po -o custom-columns=POD:metadata.name,NODE:spec.nodeName --sort-by 
 scheduler、controller manager的leader election：
 
 使用一个configmap标识，control-plane.alpha.kubernetes.io/leader的annotation会标识谁是leader
+
+
+### serviceaccount
+
+只能在创建pod的时候赋值，不能修改
+
+### hostport
+
+不会使用整个宿主机的网络栈，而是相当于一个portforward的作用，在宿主机上会生成iptables转发，到达该port的请求转发到容器中
+
+>It’s important to understand that if a pod is using a specific host port, only one instance of the pod can be scheduled to each node, because two processes can’t bind to the same host port. 
+
+>Initially, people also used it to ensure two replicas of the same pod were never scheduled to the same node, but now you have a better way of achieving this
+
+### securityContext
+
+To get full access to the node’s kernel, the pod’s container runs in privileged mode.
+
+如果runasuser和容器镜像内设定的不一致，不会允许该pod调度
+
+为了让两个以不同用户运行的pod可以共享volume，可以定义fsGroup或者supplementalGroups，创建文件的用户组就会是共同定义的组
+
+PodSecurityPolicy被废弃，替代品为PodSecurityAdmission
+
+>`PodSecurityPolicy` is a cluster-level (non-namespaced) resource, which defines what security-related features users can or can’t use in their pods. The job of upholding the policies configured in PodSecurityPolicy resources is performed by the `PodSecurityPolicy admission control plugin` running in the API server
+
+
+kubectl可以创建用户的context：kubectl config set-credentials alice --username=alice --password=password
+
+### limit request
+
+内存限制在容器内的应用看来是不存在的，只能看到整个node的内存量，cpu限制同理，应用可以看到所有cpu核，只是分配的cpu时间片变化了
+
+You may want to use the `Downward API` to pass the CPU limit to the container and use it instead of relying on the number of CPUs your app can see on the system. You can also tap into the cgroups system directly to get the configured CPU limit by reading the following files:
+
+- /sys/fs/cgroup/cpu/cpu.cfs_quota_us
+- /sys/fs/cgroup/cpu/cpu.cfs_period_us
+
+#### limitrange resourcequota
+
+limitrange可以规定默认的limit和request，没有规定的pod会自动携带上，通过admission plugin实现，也可以规定范围检查
+
+resourcequota针对整个命名空间的limit和request总量，而limitrange只规定单个pod
+
+### kubeconfig
+
+有cluster、user和context、当前context名称四大部分，其中context是包含了cluster、user、namespace对应关系的配置
+
+其中user包含了用户名和登录credentials
+
+### custom object
+
+custom object，crd，可以没有对应的controller来控制，像configmap一样，可以被其他资源查找使用不需要controller
+
+### Cluster Autoscaler
+
+The Cluster Autoscaler takes care of automatically provisioning additional nodes when it notices a pod that can’t be scheduled to existing nodes because of a lack of resources on those nodes. It also de-provisions nodes when they’re underutilized for longer periods of time.
+
+### PodDisruptionBudget
+
+为了防止进行节点缩容时影响服务，定义该资源，规定pod必须有一定数量，如果缩容会影响，则不能进行该操作
+
+### taint
+
+Each taint has an effect associated with it. Three possible effects exist: 
+
+- NoSchedule, which means pods won’t be scheduled to the node if they don’t tolerate the taint.
+- PreferNoSchedule is a soft version of NoSchedule, meaning the scheduler will try to avoid scheduling the pod to the node, but will schedule it to the node if it can’t schedule it somewhere else.
+- NoExecute, unlike NoSchedule and PreferNoSchedule that only affect scheduling, also affects pods already running on the node. If you add a NoExecute taint to a node, pods that are already running on that node and don’t tolerate the NoExecute taint will be evicted from the node.
+
+### Vertical Pod Autoscaler (VPA)
+
+Autoscaling is configured with a Custom Resource Definition object called VerticalPodAutoscaler. It allows to specify which pods should be vertically autoscale as well as if/how the resource recommendations are applied.
+
+[ref](https://foxutech.medium.com/vertical-pod-autoscaler-vpa-know-everything-about-it-6a2d7a383268)
+
+
+### node affinity
+
+Node selectors will eventually be deprecated, so it’s important you understand the new node affinity rules.
+

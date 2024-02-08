@@ -117,6 +117,8 @@ real_ip_recursive ：
 
 nginx在加载配置文件启动后，重载需要`nginx -s reload -c nginx.conf`
 
+nginx -T只会读取默认配置文件位置，不会读取-c启动的配置文件
+
 ### openresty lua
 
 openresty就是用到了lua的nginx

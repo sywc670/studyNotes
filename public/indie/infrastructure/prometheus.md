@@ -19,7 +19,7 @@ Prometheus Operator目前提供的️4类资源：
 - 通过blackbox-exporter拿到网络指标
 - 通过kube-state-metrics拿到k8s资源对象和组件指标，从apiserver拿
 - 通过在软件中使用prometheus库暴露接口拿到软件自定义指标
-- metrics server从kubelet拿到指标，kubelet的summaryAPI，包含了cadvisor
+- metrics server从kubelet拿到指标，kubelet的summaryAPI，包含了cadvisor，这些指标被hpa用于scale，也被kubectl top指令使用
 
 Kubernetes 云原生集群监控主要涉及到如下三类指标：node 物理节点指标、pod & container 容器资源指标和Kubernetes 云原生集群资源指标
 
