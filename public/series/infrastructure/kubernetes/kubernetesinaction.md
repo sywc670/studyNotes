@@ -142,7 +142,17 @@ The Cluster Autoscaler takes care of automatically provisioning additional nodes
 
 为了防止进行节点缩容时影响服务，定义该资源，规定pod必须有一定数量，如果缩容会影响，则不能进行该操作
 
-### taint
+### Vertical Pod Autoscaler (VPA)
+
+Autoscaling is configured with a Custom Resource Definition object called VerticalPodAutoscaler. It allows to specify which pods should be vertically autoscale as well as if/how the resource recommendations are applied.
+
+[ref](https://foxutech.medium.com/vertical-pod-autoscaler-vpa-know-everything-about-it-6a2d7a383268)
+
+### 调度
+
+taint、affinity(node, pod, anti)
+
+#### taint
 
 Each taint has an effect associated with it. Three possible effects exist: 
 
@@ -150,14 +160,28 @@ Each taint has an effect associated with it. Three possible effects exist:
 - PreferNoSchedule is a soft version of NoSchedule, meaning the scheduler will try to avoid scheduling the pod to the node, but will schedule it to the node if it can’t schedule it somewhere else.
 - NoExecute, unlike NoSchedule and PreferNoSchedule that only affect scheduling, also affects pods already running on the node. If you add a NoExecute taint to a node, pods that are already running on that node and don’t tolerate the NoExecute taint will be evicted from the node.
 
-### Vertical Pod Autoscaler (VPA)
 
-Autoscaling is configured with a Custom Resource Definition object called VerticalPodAutoscaler. It allows to specify which pods should be vertically autoscale as well as if/how the resource recommendations are applied.
-
-[ref](https://foxutech.medium.com/vertical-pod-autoscaler-vpa-know-everything-about-it-6a2d7a383268)
-
-
-### node affinity
+#### node affinity
 
 Node selectors will eventually be deprecated, so it’s important you understand the new node affinity rules.
+
+node selector是node有某个label，pod有这个label的selector就可以调度上去，功能比较局限
+
+`preferredDuringSchedulingIgnoredDuringExecution`这个规则使得node affinity可以在调度时有优先级，先考虑某些节点，如果不行再考虑其他节点，多个preference可以有多个优先级，但是**这个优先级只是调度器参考的一部分**，如果还有其他影响调度的因素如：调度器默认会将pod分散到不同的节点，这个优先级不一定完全生效
+
+>The reason is that besides the node affinity prioritization function, the Scheduler also uses other prioritization functions to decide where to schedule a pod. One of those is the SelectorSpreadPriority function, which makes sure pods belonging to the same ReplicaSet or Service are spread around different nodes so a node failure won’t bring the whole ser-vice down. 
+
+#### pod affinity
+
+>What’s interesting is that if you now delete the backend pod, the Scheduler will schedule the pod to node2 even though it doesn’t define any pod affinity rules itself (the rules are only on the frontend pods). This makes sense, because otherwise if the backend pod were to be deleted by accident and rescheduled to a different node, the fron-tend pods’ affinity rules would be broken.
+
+pod affinity会使得双方pod都会调度到一个节点上，注意是调度器会考虑双方
+
+topologyKey不仅可以让双方pod在同一节点：topologyKey: kubernetes.io/hostname
+
+还可以在同一区域failure-domain.beta.kubernetes.io/zone，同一地域failure-domain.beta.kubernetes.io/region
+
+这个topologyKey生效的原理是：由于pod affinity也是将pod调度到node上，所以会先用topologyKey选出有该key的node，这些node如果有满足affinity的pod，就会调度在这些node上
+
+pod affinity也可以设置preference而不是hard requirement
 
