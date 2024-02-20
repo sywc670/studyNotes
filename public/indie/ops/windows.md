@@ -19,3 +19,11 @@ Windows 中个东西叫做“TCP 动态端口范围”，这个范围内的端�
 ### hosts
 
 C:\Windows\System32\drivers\etc
+
+### chrome 禁止https跳转
+
+新建标签页，地址栏中输入 chrome://net-internals/#hsts
+在 Delete domain security policies 中输入项目的域名，只需要输入 a.b.c，并 Delete 删除
+浏览器栏手动输入 http://a.b.c/d/e/f.html 进行访问即可
+
+链接：https://www.jianshu.com/p/fd37dd750384

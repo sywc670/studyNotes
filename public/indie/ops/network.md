@@ -211,3 +211,129 @@ Content-Type: text/html; charset=utf-8
 
 根区数据库中列出了顶级域名 (TLD)（例如 .com 和 .org）。在上面的示例中，“site”是架构、TLD 和域名前面部分（我们称之为 TLD+1）的组合。例如，如果网址为 https://www.example.com:443/foo，则“网站”为 https://example.com。
 
+### DNS在代理环境
+
+[ref](https://tachyondevel.medium.com/%E6%BC%AB%E8%B0%88%E5%90%84%E7%A7%8D%E9%BB%91%E7%A7%91%E6%8A%80%E5%BC%8F-dns-%E6%8A%80%E6%9C%AF%E5%9C%A8%E4%BB%A3%E7%90%86%E7%8E%AF%E5%A2%83%E4%B8%AD%E7%9A%84%E5%BA%94%E7%94%A8-62c50e58cbd0)
+
+没有任何设置时，浏览器请求dns服务器
+
+socks5代理设置后，浏览器不需要进行DNS请求，直接将域名写入socks请求发给代理服务器，可以是v2ray
+
+如果v2ray中outbound设置为freedom，默认还是会用主机设置dns服务器请求，但是整个流程就多出了v2ray这一层
+
+如果再给v2ray中outbound加上domainStrategy：UseIP，就会用到v2ray内置的dns，也就是配置的dns服务器
+
+>在目标地址为域名时，Freedom 可以直接向此域名发出连接（"AsIs"），或者将域名解析为 IP 之后再建立连接（"UseIP"、"UseIPv4"、"UseIPv6"）。解析 IP 的步骤会使用 V2Ray 内建的 DNS。默认值为"AsIs"。
+
+一般这种 DNS 请求都是纯文本（我们也只讨论这种 DNS），它们所流经的各种设备，各种程序都可以看到，可以修改里面的内容，发出的请求可以修改，返回的结果也可以修改，甚至修改过后毫无痕迹，就是说，**对于发出的请求，DNS 服务器没办法知道它是否在中间链路被修改过，对于返回的结果，应用程序也没办法知道它是否在中间链路被修改过。**
+
+```json
+{
+    "dns": {
+        "servers": [
+            "8.8.8.8",
+            "localhost"
+        ]
+    },
+    "outbounds": [
+        {
+            "protocol": "vmess",
+            "settings": {
+                "vnext": [
+                    {
+                        "users": [
+                            {
+                                "id": "xxx-x-x-x-xx-x-x-x-x"
+                            }
+                        ],
+                        "address": "1.2.3.4",
+                        "port": 10086
+                    }
+                ]
+            },
+            "streamSettings": {
+                "network": "tcp"
+            },
+            "tag": "proxy"
+        },
+        {
+            "tag": "direct",
+            "protocol": "freedom",
+            "settings": {}
+        }
+    ],
+    "inbounds": [
+        {
+            "domainOverride": [
+                "http",
+                "tls"
+            ],
+            "port": 1086,
+            "listen": "127.0.0.1",
+            "protocol": "socks",
+            "settings": {
+                "auth": "noauth",
+                "udp": true,
+                "ip": "127.0.0.1"
+            }
+        }
+    ],
+    "routing": {
+        "domainStrategy": "IPIfNonMatch",
+        "rules": [
+            {
+                "type": "field",
+                "ip": [
+                    "8.8.8.8"
+                ],
+                "outboundTag": "proxy"
+            },
+            {
+                "type": "field",
+                "domain": [
+                    "geosite:cn"
+                ],
+                "outboundTag": "direct"
+            }
+        ]
+    }
+}
+```
+内置 DNS 用 8.8.8.8 做首选服务器，localhost 作备用，路由中首先来一条规则让 8.8.8.8 的流量一定走 proxy，匹配了 geosite:cn 中的域名的请求走 direct，如果没匹配任何规则，则走主 outbound，也即 outbounds 中的第一个，也即 proxy。
+
+S4
+1. 假设浏览器请求 https://www.bilibili.com
+2. 浏览器发 SOCKS 请求到 V2Ray
+3. 请求来到 V2Ray 的 inbound，再到路由过程
+4. 很明显 www.bilibili.com 这个域名包括在 geosite:cn 中，走 direct
+5. Freedom outbound (direct) 对 www.bilibili.com 发起 TCP 连接
+6. Freedom outbound 解析域名，因为这次没有用 UseIP，用的是系统 DNS
+7. 直接发 DNS 请求到 114.114.114.114
+8. 得到结果后可以跟 Bilibili 服务器建立连接，准备代理浏览器发过来的 HTTPS 流量
+
+S5
+1. 再假设浏览器请求 https://www.google.com
+2. 浏览器发 SOCKS 请求到 V2Ray
+3. 请求来到 V2Ray 的 inbound，再到路由过程
+4. www.google.com 不在 gesoite:cn，也没匹配任何规则，本来应该直接走主 outbound: proxy，但因为我们用了 IPIfNonMatch 策略，V2Ray 会去尝试使用内置的 DNS 把 www.google.com 的 IP 解析出来
+5. V2Ray 使用内置 DNS 向 8.8.8.8 发起针对 www.google.com 的 DNS 请求，这个请求的流量将会是 UDP 流量
+6. 内置 DNS 发出的 DNS 请求会按路由规则走，因为 8.8.8.8 匹配了路由中的第一条规则，这个 DNS 请求的流量会走 proxy
+7. proxy 向远端代理服务器发起 TCP 代理连接（因为 "network": "tcp"）
+8. 建立起 TCP 连接后，proxy 向远端代理服务器发出 udp:8.8.8.8:53 这样的代理请求
+9. 远端服务器表示接受这个代理请求后，proxy 用建立好的 TCP 连接向远端服务器发送承载了 DNS 请求的 UDP 流量（所以 V2Ray/VMess 目前是 UDP over TCP）
+10. 远端代理服务器接收到这些承载 DNS 请求的 UDP 流量后，发送给最终目标 udp:8.8.8.8:53
+11. 8.8.8.8 返回给远端代理服务器 DNS 结果后，远端代理服务器原路返回至本地 V2Ray 的内置 DNS，至此，从步骤 5 ~ 11，整个 DNS 解析过程完成。
+12. 接上面步骤 4，V2Ray 得到 www.google.com 的 IP，再进行一次规则匹配，很明显路由规则中没有相关的 IP 规则，所以还是没匹配到任何规则，最终还是走了主 outbound: proxy
+13. proxy 向远端代理服务器发起 TCP 代理连接（因为 "network": "tcp"）
+14. 连接建立后，因为 proxy 中所用的 VMess 协议可以像 SOCKS 那样把域名交给代理服务器处理，所以本地的 V2Ray 不需要自己解析 www.google.com，把域名放进 VMess 协议的参数中一并交给代理服务器来处理
+15. 远端的 V2Ray 代理服务器收到这个代理请求后，它可能自己做域名解析，也可能继续交给下一级代理处理，只要后续代理都支持类 SOCKS 的域名处理方式，这个 DNS 请求就可以一推再推，推给最后一个代理服务器来处理，这个超出本文范围不作讨论，反正这个域名不需要我们本地去解析
+16. 远端代理服务器最后会发出针对 www.google.com 的 DNS 请求（至于究竟是如何发，发到哪个 DNS 服务器，我们不一定能知道，也不关心这个）
+17. 远端代理服务器得到 DNS 结果后，可以真正地向 Google 的服务器建立 TCP 连接18. 远端的 V2Ray 做好准备后告诉本地 V2Ray 连接建立好了，可以传数据了
+19. 本地 V2Ray 就告诉浏览器连接好了，可以传数据了，浏览器就可以把 HTTPS 流量顺着这个代理链发送至 Google 的服务器
+
+#### DNS分流
+
+根据域名来选择使用哪个域名服务器来解析该域名，这个功能的用途在于直接用国外的dns服务器解析会被墙，而走代理解析又可能会返回国外cdn的结果，所以需要直接用国内的dns服务器来解析
+
+关于内置 DNS，最后再说一说 localhost ，上面的描述不适用于 localhost，简单说，内置 DNS 在向 servers 列表中的 localhost 发 DNS 请求时，不会用任何 outbound 来发（甚至不用 Freedom outbound），而是直接从本机发出，就像任何其它程序做 DNS 请求那样，直接调用系统的 DNS API，用系统 DNS 中配置的 DNS 服务器。
+
