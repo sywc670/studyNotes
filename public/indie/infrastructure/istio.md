@@ -48,7 +48,7 @@ metadata:
   name: service-b-vs
 spec:
   hosts:
-    - Service-B
+    - Service-B # 这里的hosts是域名或者IP等可寻址地址
   http:
     - route:
         - destination:
@@ -56,7 +56,7 @@ spec:
             subset: old
           weight: 95
         - destination:
-            host: Service-B
+            host: Service-B # 这里的host可以是DestinationRule声明的host，istio也会自动认别原生的service
             subset: new
           weight: 5
 ```
@@ -81,6 +81,19 @@ spec:
 ```
 通过这个配置，服务 "Service-B" 被划分为两个子集，分别是 "old" 和 "new"。每个子集都有一组标签，用于标识服务的版本或其他属性。这些标签可以在 Istio 的流量管理规则中使用，例如在 VirtualService 中进行流量路由。这种标签的使用有助于实现服务的细粒度流量控制和版本管理。
 
+## Gateway
+
+Gateway的配置是管理边界上独立的envoy proxy的，不管理sidecar envoy。Gateway只负责4-6层，7层转发由VirtualService负责，在VirtualService中绑定Gateway实现。
+
+Gateway可以负责进出两种链路的流量。Gateway的selector是用来找到独立的envoy proxy的。
+
+## Service Entry
+
+用于注册网格外部的服务到istio，这样就可以配置路由到外部服务这样。
+
+## Sidecar
+
+控制sidecar envoy可以访问pod的哪些端口或者可以访问哪个服务的。
 
 # 蓝绿发布 滚动发布 灰度发布 金丝雀发布 平滑更新
 
@@ -97,6 +110,8 @@ spec:
 相比滚动发布，灰度发布将部分流量按权重导到新版本，逐渐增大权重，如果在这时对两个版本做数据对比，就是A/B测试
 
 **我认为灰度发布像是蓝绿发布和滚动发布的一种结合，蓝绿发布直接切换流量，而灰度是逐渐按照权重切换，滚动发布根据两个版本的数量作流量权重，而灰度发布是人为调整流量权重，且灰度可以直接知道哪些流量到达了新版本，以此进行测试，相当于多了一个流量控制器**。
+
+kubernetes原生就是滚动发布，而istio可以做到灰度发布
 
 平滑更新：
 

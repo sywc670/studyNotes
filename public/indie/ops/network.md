@@ -49,7 +49,13 @@ socket在linux上是文件形式，有uds，是本机进程交流用的，也有
 
 ### AD域
 
+[AD域控系列博客](https://www.cnblogs.com/itzgr/p/15554185.html)
+
 [ref](https://zhuanlan.zhihu.com/p/45553448)
+
+[阿里云创建域控加入](https://help.aliyun.com/zh/ecs/use-cases/ecs-instance-building-windows-active-directory-domain)
+
+[官方文档](https://learn.microsoft.com/zh-cn/windows-server/identity/ad-ds/get-started/virtual-dc/active-directory-domain-services-overview)
 
 AD认证和ldap都可以做到一个账户登录多个机器，AD使用到了ldap
 
@@ -80,6 +86,12 @@ AD(active directory)**活动目录**,动态的建立整个域模式网络中的�
 #### 活动目录(AD)与域名系统(DNS)的关系
 
 在TCP/IP网络中，域名系统(DNS)是用来解决计算机名字和IP地址的映射关系的，活动目录和DNS是紧密不可分的，活动目录使用DNS服务器来登记域控制器的IP、各种资源的定位等，在一个域林中至少要有一个DNS服务器存在，所以安装活动目录时需要同时安装DNS。此外，域的命名也是采用DNS的格式来命名的。
+
+#### 林
+
+林上可以有多个域，当建立第一个域时就需要新建林，林的作用是可以管理多个域
+
+
 
 #### 域与组
 
@@ -122,6 +134,16 @@ NIS主要用于UNIX/Linux系统，特别是传统的基于文本文件的配置�
 CDN技术原理是在各地建立缓存服务器，分担源服务器的流量，加速本地访问速度。
 
 CDN的访问过程依赖于**DNS的重定向技术**，即将用户定向至地理位置上距离其最近的边缘CDN节点服务器上。用户首先向根DNS服务器发送域名解析请求，根DNS服务器向授权DNS服务器发送域名解析请求，请求中包含了根服务器的IP地址，当域名解析服务器/根DNS服务器接受到一个CNAME类的DNS记录，域名解析服务器会重定向到CDN节点网络层中的**智能CDN域名服务器**上，CDN域名服务器将进行一系列的智能解析操作，根据**本地DNS域名解析服务器的IP地址**，分析各个网络线路的拥堵情况和负载情况，将最适合的CDN节点服务器IP地址返还给根DNS服务器，用户接受到CDN节点的IP地址后，直接向CDN节点服务器发送请求获取网站内容。
+
+#### 回源跟随
+
+CDN回源跟随（Follow Redirect）是一种内容分发网络（CDN）的功能，它允许CDN节点在处理源站（即原始服务器）返回的301或302状态码（HTTP重定向响应）时，自动跟随重定向到新的URL地址去获取资源。这样做的目的是为了确保用户能够获取到最新的资源，同时保持资源的一致性和可用性。
+
+在没有开启回源跟随功能的情况下，当CDN节点收到源站的301或302响应时，它会将这个响应直接传递给用户，由用户的浏览器或客户端去处理重定向，这可能会导致用户体验上的延迟，因为用户需要额外的请求来获取资源。
+
+开启回源跟随功能后，CDN节点会代替用户处理这些重定向，直接从新的URL地址获取资源，并将获取到的资源缓存起来。这样，当其他用户请求相同的资源时，CDN可以直接从缓存中提供资源，从而提高了资源的加载速度和用户体验。
+
+这个功能在源站地址发生变化，但希望用户仍然能够通过原来的URL访问资源时特别有用。例如，如果源站的某个文件被移动到了新的路径，通过配置回源跟随，CDN可以确保用户访问旧的URL时仍然能够获取到最新的资源。
 
 ### 跨域CORS
 
@@ -336,4 +358,16 @@ S5
 根据域名来选择使用哪个域名服务器来解析该域名，这个功能的用途在于直接用国外的dns服务器解析会被墙，而走代理解析又可能会返回国外cdn的结果，所以需要直接用国内的dns服务器来解析
 
 关于内置 DNS，最后再说一说 localhost ，上面的描述不适用于 localhost，简单说，内置 DNS 在向 servers 列表中的 localhost 发 DNS 请求时，不会用任何 outbound 来发（甚至不用 Freedom outbound），而是直接从本机发出，就像任何其它程序做 DNS 请求那样，直接调用系统的 DNS API，用系统 DNS 中配置的 DNS 服务器。
+
+### cookie session token JWT
+
+cookie用作身份识别，一段时间不用再登录，cookie为了防止被冒名，可以进行数字签名
+
+session其实就是一种cookie，目的是服务器不希望存储太多数据在浏览器cookie jar中，可以在服务器上绑定一个key和登录信息的关系，这个key发给浏览器设置为cookie，就是session id，服务器就可以根据session id查找到登录信息
+
+除了浏览器的其他客户端没有cookie机制，所以就出现了token，token就相当于一种session
+
+JWT是一种token，反而类似于cookie，原因与session出现的理由相反，不希望服务器存放太多数据，希望接口保持无状态，因为有些服务器可能是分布式，如果需要存储这个数据，会相对麻烦。所以让客户端多携带信息，然后进行数字签名，JWT就是一种。
+
+总结：cookie、session用于浏览器，token、JWT用于客户端。cookie、JWT携带信息，session、token让服务器存储信息，只携带对应的key
 

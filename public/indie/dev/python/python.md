@@ -99,6 +99,7 @@ EOF
 原文链接：https://blog.csdn.net/qq_45382565/article/details/126657144
 
 #### There was a problem confirming the ssl certificate
+
 临时
 pip install numpy -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn
 新建pip.ini
