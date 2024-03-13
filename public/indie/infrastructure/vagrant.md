@@ -40,3 +40,9 @@ https://github.com/Karandash8/virtualbox_WSL2
 https://stackoverflow.com/questions/46150672/vagrant-wsl-rsync-and-ssh-permission-error/46154824#46154824
 https://zhuanlan.zhihu.com/p/259833884
 ```
+
+# 搭建vagrant+virtualbox环境
+
+vagrant plugin install vagrant-vbguest
+
+By default, Vagrant shares your project directory (the one containing the Vagrantfile) to the /vagrant directory in your guest machine.

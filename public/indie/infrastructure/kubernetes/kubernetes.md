@@ -31,6 +31,9 @@ etcd 的高可用方案有下面这 3 种思路：
 
 ### kustomize
 
+[入门介绍教程](https://zhuanlan.zhihu.com/p/669291774)
+[官方文档](https://kubectl.docs.kubernetes.io/)
+
 可以用于补充yaml配置和生成配置
 
 kubectl kustomize (dir)
@@ -109,6 +112,8 @@ EOF
 失去 last-applied-configuration 后，表达 ownership 的任务就落入了新引入的字段管理机制（field management）手中。根据以上输出的 yaml 的 metadata.managedFields 字段，我们不难得出它想表达的含义：该 configmap 中 data.a 和 data.b 字段都是由 kubectl 来管理的。
 
 ssa的优点是更细粒度的管理，并且csa是深度绑定kubectl的，ssa可以让其他组件通过client-go包也实现apply机制
+
+查看yaml时去掉其中大部分`grep -Ev "[kf.]:"`
 
 ### kubectl 多集群管理凭证
 
@@ -193,3 +198,95 @@ $ hey -n 50000 -c 1000 http://${APP_ENDPOINT}
 registry.aliyuncs.com/google_containers
 
 registry.cn-hangzhou.aliyuncs.com/acs/
+
+### serverless
+
+#### 腾讯云serverless
+
+[ref](https://cloud.tencent.com/document/product/457/98730)
+
+腾讯云上实现daemonset的兼容，原理我理解是如下：
+自己实现了daemonset的自定义控制器，控制器只会显示启动了与超级节点(virtual kubelet)一样的pod数量，但是实际的实现是类似于sidecar，每个pod注入一个容器，但是信息放在status中
+
+这个自动注入可以在集群、pod、命名空间层面指定
+
+### kubectl命令使用
+
+#### patch 一个命名空间内所有deployment置零
+
+```shell
+#!/bin/bash
+
+# 检查参数个数
+if [ "$#" -ne 1 ]; then
+  echo "Usage: $0 <namespace>"
+  echo "Example: $0 my-namespace"
+  exit 1
+fi
+
+# 命名空间参数
+NAMESPACE=$1
+
+# 检查命名空间是否存在
+if ! kubectl get namespace "$NAMESPACE" &> /dev/null; then
+  echo "Namespace '$NAMESPACE' does not exist."
+  exit 1
+fi
+
+# 获取命名空间下的所有 Deployments
+DEPLOYMENTS=$(kubectl get deployments -n "$NAMESPACE" -o name)
+
+# 检查是否有任何 Deployments 被找到
+if [ -z "$DEPLOYMENTS" ]; then
+  echo "No deployments found in namespace '$NAMESPACE'."
+  exit 0
+fi
+
+# 遍历每个 Deployment 并 patch
+for DEPLOYMENT in $DEPLOYMENTS; do
+  echo "Patching $DEPLOYMENT in namespace $NAMESPACE..."
+  kubectl patch "$DEPLOYMENT" -n "$NAMESPACE" -p '{"spec":{"replicas":1}}'
+done
+
+echo "All deployments in namespace $NAMESPACE have been patched."
+kubectl get -n $NAMESPACE deployments.apps
+```
+
+#### 统计k8s命名空间的deployment个数
+
+```shell
+#!/bin/bash
+
+# 获取所有命名空间
+namespaces=$(kubectl get ns --no-headers -o custom-columns=:metadata.name)
+
+# 对每个命名空间，获取Deployment数量并输出
+for ns in $namespaces; do
+    # 使用grep来过滤掉可能的错误信息
+    deployments=$(kubectl get deploy -n $ns 2>/dev/null | grep -v "No resources found" | wc -l)
+    # 输出命名空间和Deployment数量
+    echo "$ns  $deployments"
+done
+```
+
+#### 列出deployment的名字、limit和request
+
+```shell
+kubectl get deployments -A -o=go-template='{{range .items}}{{.metadata.name}}:{{"\n"}}{{range .spec.template.spec.containers}}{{if .resources.limits.cpu}}cpulimit: {{.resources.limits.cpu}}{{else}}No CPU limit{{end}}{{"\n"}}{{if .resources.limits.memory}}memorylimit: {{.resources.limits.memory}}{{else}}No Memory limit{{end}}{{"\n"}}{{if .resources.requests.cpu}}cpurequest: {{.resources.requests.cpu}}{{else}}No CPU request{{end}}{{"\n"}}{{if .resources.requests.memory}}memoryrequest: {{.resources.requests.memory}}{{else}}No Memory request{{end}}{{"\n"}}{{end}}{{"\n"}}{{end}}'
+
+# 包含两重循环：一层循环items，一层循环containers
+# 最后一个{{"\n"}}代表的是每次输出完limits和requests后输出一个空行
+```
+
+#### apply yaml到每个命名空间
+
+```shell
+# 提供limitrange.yml
+for ns in $(kubectl get ns --no-headers -o=custom-columns=NAME:.metadata.name); do kubectl apply -f limitrange.yml -n $ns; done
+```
+
+### sysctl
+
+[ref](https://kubernetes.io/docs/tasks/administer-cluster/sysctl-cluster/)
+
+社区分为两种，安全和不安全的，安全的默认启动，不安全的会影响一个node上所有的pod

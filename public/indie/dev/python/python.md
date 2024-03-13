@@ -1,5 +1,15 @@
 ### python语法
 
+#### os.path.abspath
+
+参数写不存在的目录会直接加在当前目录里
+
+#### bytes str
+
+AnyStr = bytes + str
+
+bytes只能表示ascii编码的字符，str是unicode编码的
+
 #### open模式
 
 w在打开之后会删除文件所有内容，所以w+和r+的区别是w+会删除内容，而r+只会覆盖写的部分，a+是从末尾开始

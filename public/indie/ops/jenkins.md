@@ -23,11 +23,19 @@ params env currentBuild 这几个变量是全局变量，有各自用途
 
 ### 重要的插件
 
-Pipeline Groovy Libraries 让jenkinsfile可以以仓库形式存在，各个文件的组织形式像代码一样，方便复用
 docker pipeline
 
+#### Pipeline Groovy Libraries
+
+[ref](https://plugins.jenkins.io/pipeline-groovy-lib/)
+
+定义的def call()会通过代码文件的名字调用如：其他文件使用sayHello.groovy，通过sayHello()调用call的内容
+
+让jenkinsfile可以以仓库形式存在，各个文件的组织形式像代码一样，方便复用
 
 #### kubernetes
+
+[plugin](https://plugins.jenkins.io/kubernetes/)
 
 node(POD_LABEL)的POD_LABEL是运行时会生成一个独特的值好像是creates a pod template with a generated unique label (available as POD_LABEL) 
 
