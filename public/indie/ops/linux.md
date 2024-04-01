@@ -305,3 +305,53 @@ Linux 程序被外界中断时会发送中断信号，程序退出时的状态�
 ## 新硬盘挂载流程
 
 [ref](https://cloud.tencent.com/document/product/362/6734#Linux)
+
+## session id 
+
+查看进程各种id：
+
+ps xao pid,ppid,pgid,sid,comm
+
+介绍：
+
+In Linux, every process has several IDs associated with it, including:
+
+Process ID (PID)
+
+This is an arbitrary number identifying the process. Every process has a unique ID, but after the process exits and the parent process has retrieved the exit status, the process ID is freed to be reused by a new process.
+
+Parent Process ID (PPID)
+
+This is just the PID of the process that started the process in question. If the parent process exits before the child does, the child's PPID is changed to another process (usually PID 1).
+
+Process Group ID (PGID)
+
+This is just the PID of the process group leader. If PID == PGID, then this process is a process group leader.
+
+Session ID (SID)
+
+This is just the PID of the session leader. If PID == SID, then this process is a session leader.
+
+Sessions and process groups are just ways to treat a number of related processes as a unit. All the members of a process group always belong to the same session, but a session may have multiple process groups.
+
+Normally, a shell will be a session leader, and every pipeline executed by that shell will be a process group. 
+
+### setsid
+
+[ref](https://stackoverflow.com/questions/45911705/why-use-os-setsid-in-python)
+
+[ref2](https://blog.csdn.net/weixin_30336531/article/details/116609490)
+
+setsid creates a new session id for the command you run using it, so that it does not depend on your shell session. If the shell session is closed the other command will continue to run. 
+
+>session退出以后所有隶属于该session的进程组都会收到hup信号而挂起
+
+shell创建的sid，而每次执行sudo就会创建新的pgid，不执行sudo执行python也会创建pgid，用sudo python的话sudo就相当于python的父进程，也是sudo的pgid
+
+一个进程只要父进程退出，ppid就会变成1，不受ctrl+c影响，但是该shell退出会影响，setsid之后会有新的sid和pgid等于pid，不受影响
+
+double fork的原因主要有:
+
+如果只有一次fork，假如父进程并没有退出，而是需要继续运行其他代码，那么子进程daemon就不会被过继给init。在两次fork的情况下，第一个child process的作用只是用来产生daemon进程，fork完称以后可以直接exit，这样就能显式保证daemon在创建完成后就会被过继给init，而祖父进程仍然可以继续执行其他逻辑
+
+如果只有一次fork，那么daemon因为setsid，所以会是session leader。这意味着daemon将有权限将这个新创建的session绑定到tty上。而两次fork产生的daemon，因为**第二个child process并没有setsid，所以并不是session leader**，从而杜绝了这种情况发生

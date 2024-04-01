@@ -56,6 +56,10 @@ web服务器和应用通信就通过WSGI协议，至于为什么需要这个协�
 
 ### python库
 
+#### atexit
+
+定义多个退出函数
+
 #### pandas
 
 [官方文档](https://pandas.pydata.org/pandas-docs/stable/index.html)

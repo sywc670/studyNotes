@@ -1,6 +1,8 @@
 - [ansible 命令](#ansible-命令)
   - [ansible查看插件命令](#ansible查看插件命令)
 - [ansible 知识](#ansible-知识)
+  - [自定义模块](#自定义模块)
+  - [ansible\_runner](#ansible_runner)
   - [ansible modules plugin](#ansible-modules-plugin)
     - [import\_tasks与include\_tasks模块](#import_tasks与include_tasks模块)
   - [jinjia2模板](#jinjia2模板)
@@ -39,6 +41,16 @@ ansible-doc -t lookup dict
 ```
 
 # ansible 知识
+
+## 自定义模块
+
+[ref](https://blog.csdn.net/qq_37326531/article/details/130119675)
+
+自定义模块可以用go\python\shell等语言实现，其实就是拷贝过去执行
+
+## ansible_runner 
+
+[ref](https://ansible.readthedocs.io/projects/runner/en/latest/)
 
 ## ansible modules plugin
 

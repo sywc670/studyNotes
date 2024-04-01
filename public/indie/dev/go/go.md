@@ -643,3 +643,5 @@ block和define十分类似，根据官方文档的解释：block等价于define�
 对于html/template包，有一个很好用的功能：上下文感知。text/template没有该功能。
 
 上下文感知具体指的是根据所处环境css、js、html、url的path、url的query，自动进行不同格式的转义。
+
+{{ $v := or .Site.Language.LanguageCode .Site.Language.Lang }} or用来设置值，如果前一个没有值，就会用后一个设置值，相当于有backup

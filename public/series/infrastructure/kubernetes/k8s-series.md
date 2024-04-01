@@ -93,3 +93,28 @@ cdebug exec --privileged -it --image nixery.dev/shell/ps/vim/tshark <target>
 
 ```
 
+## attach vs exec 
+
+![](../../../../reference/pic/docker-containerd-runc-2000-opt.png)
+
+当一个进程daemonize后，ppid会变成1，关闭所有的stdin\stdout\stderr流，但docker不能这样
+
+containerd创建containerd-shim，containerd-shim daemonize，关闭自己的stdio流，shim启动runc来启动容器进程
+
+shim会掌控容器的stdio流，将其输出到日志文件中，默认shim会关闭容器的stdio流，但是docker run -i选项可以打开，并且shim充当了一个server的职能，可以通过RPC访问它，传输信息到容器的stdio流，这就是attach。
+
+terminal <-> docker <-> dockerd <-> shim <-> container's stdio streams
+
+attach与logs的区别，logs只是将日志的内容输出到界面上，而attach控制了stdio流，可以影响到容器
+
+attach是连接到容器的stdio流，而exec是创建了一个新的容器，只是这个新容器共享所有namespace，包括mnt，这个容器有自己的stdio流，exec就连接到这个stdio流上
+
+## runc运行容器
+
+大概需要一个rootfs和一个config.json，json文件描述容器的配置，运行可以用runc命令，rootfs也可以只是一个文件夹，镜像分层是为了节省空间，与运行无关
+
+## 制作镜像
+
+RUN指令实际上会启动一个容器，在容器内执行命令，做成镜像
+
+kaniko不会启动容器来制作镜像，只会将文件系统替换成对应镜像的文件系统，再执行命令，因此，如果在宿主机使用kaniko，会抹去宿主机文件系统，所以kaniko实际上在容器中使用的，这样无需提权

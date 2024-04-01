@@ -29,6 +29,10 @@ etcd 的高可用方案有下面这 3 种思路：
 
 [ref](https://iximiuz.com/en/posts/kubernetes-api-go-types-and-common-machinery/)
 
+runtime.Object用于一切有kind的对象
+
+runtime.Scheme用于从apiversion、kind中创建出对象
+
 ### kustomize
 
 [入门介绍教程](https://zhuanlan.zhihu.com/p/669291774)
@@ -59,6 +63,10 @@ As per sig-architecture/api-conventions.md, kinds are grouped into three categor
 - Objects (Pod, Service, etc) - persistent entities in the system.
 - Lists - (PodList, APIResourceList, etc) - collections of resources of one or more kinds.
 - Simple - specific actions on objects (status, scale, etc.) or non-persistent auxiliary entities (ListOptions, Policy, etc).
+
+就是三类：一类是object，一类是list，也是resource，一类不是resource，只是简单的结构
+
+非object的resource不会持久化，只是提供一个功能，比如list
 
 Entities like ReplicaSet, Namespace, or ConfigMap are called Kubernetes Objects. **`Objects` are persistent entities in the Kubernetes system that represent an intent (desired state) and the status (actual state) of the cluster**.
 
@@ -136,6 +144,12 @@ Default：Pod直接继承集群节点的域名解析配置。即在ACK集群直�
 
 ClusterFirstWithHostNet：强制在hostNetWork网络模式下使用ClusterFirst策略（默认使用Default策略）。
 
+### 退出码
+
+137不一定是OOM，如果是OOMKill，会在reason里写，如果不是，可能会写Error
+
+137本质就是SIGKILL导致的，kill -9
+
 ### kubernetes 常用临时镜像命令
 
 #### mysql-client
@@ -192,6 +206,8 @@ $ hey -n 50000 -c 1000 http://${APP_ENDPOINT}
 ### ingress nginx controller
 
 [ref](https://kubernetes.github.io/ingress-nginx/)
+
+一个坑：ingress没有ingressclass情况下如果先绑定一个controller，之后如果controller删除了，可能不会绑定新controller了
 
 ### kubernetes镜像源
 
@@ -290,3 +306,4 @@ for ns in $(kubectl get ns --no-headers -o=custom-columns=NAME:.metadata.name); 
 [ref](https://kubernetes.io/docs/tasks/administer-cluster/sysctl-cluster/)
 
 社区分为两种，安全和不安全的，安全的默认启动，不安全的会影响一个node上所有的pod
+

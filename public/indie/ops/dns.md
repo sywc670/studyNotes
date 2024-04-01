@@ -18,3 +18,8 @@ SRV record: Using this DNS record type, it's possible to store the IP address an
 
 `_sip._tcp.example.com. 3600	IN	SRV	10 20 5000 sip-server.example.com.`
 5000是端口号 _sip是服务名，_tcp是协议 3600是TTL 10是优先级 20是权重
+
+### unbound
+
+zone.conf包含各类DNS解析条目，unbound.conf包含对该服务的设置，forward.conf包含stub-zone权威服务器设置和forward-zone转发服务器设置
+
