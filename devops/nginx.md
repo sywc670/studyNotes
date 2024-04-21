@@ -38,7 +38,7 @@ permanent，返回带有 301 代码的永久重定向
 
 [ref](https://blog.csdn.net/zzhongcy/article/details/105819628)
 
-![](../../../reference/pic/nginxrequesttime.png)
+![](../reference/pic/nginxrequesttime.png)
 
 #### map
 

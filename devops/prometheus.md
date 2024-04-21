@@ -4,7 +4,7 @@
 
 prometheus operator会根据prometheus、alertmanager、servicemonitor这些cr来新建对应的实例，这些cr本身不会有任何作用，只是yaml配置，而operator会根据这些配置来启动prometheus\alertmanager实例，也就是**statefulset形式启动的pod**。
 
-![](../../../reference/pic/prometheus-architecture.png)
+![](../reference/pic/prometheus-architecture.png)
 
 Prometheus Operator目前提供的️4类资源：
 - Prometheus：声明式创建和管理Prometheus Server实例；
@@ -23,7 +23,7 @@ Prometheus Operator目前提供的️4类资源：
 
 Kubernetes 云原生集群监控主要涉及到如下三类指标：node 物理节点指标、pod & container 容器资源指标和Kubernetes 云原生集群资源指标
 
-![](../../../reference/pic/prometheus-k8s.png)
+![](../reference/pic/prometheus-k8s.png)
 
 cAdvisor 是用于监控容器引擎的，由于其监控的实用性，Kubernetes 已经默认将其与 Kubelet 融合，所以我们无需再单独部署 cAdvisor 组件来暴露节点中容器运行的信息，直接使用 Kubelet 组件提供的指标采集地址即可
 

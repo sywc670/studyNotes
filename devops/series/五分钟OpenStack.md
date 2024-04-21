@@ -109,7 +109,7 @@ External 网络指的是 VM 网络之外的网络，该网络不由 Neutron 管�
 这几类网络只是逻辑上的划分，物理实现上有非常大的自由度。
 
 我们可以为每种网络分配单独的网卡； 也可以多种网络共同使用一个网卡；为提高带宽和硬件冗余，可以使用 bonding 技术将多个物理网卡绑定成一个逻辑的网卡
-![](../../../../reference/pic/openstack_network.jpg)
+![](../../reference/pic/openstack_network.jpg)
 
 ## linux bridge
 
@@ -301,12 +301,12 @@ ovs-vsctl add-port br0 eth0
 ovs-vsctl add-port br0 tap0 tag=100
 
 https://zhuanlan.zhihu.com/p/37408055
-![](../../../../reference/pic/openvswitch.png)
+![](../../reference/pic/openvswitch.png)
 https://blog.csdn.net/ludongguoa/article/details/121122577
 
 ### local
 
-![local 网络结构](../../../../reference/pic/openvswitchlocal.jpg)
+![local 网络结构](../../reference/pic/openvswitchlocal.jpg)
 Open vSwitch 目前还不支持将 iptables 规则放在与它直接相连的 tap 设备上。
 
 如果做不到这一点，就无法实现 Security Group 功能。
@@ -345,8 +345,8 @@ patch port 是 ovs bridge 自己特有的 port 类型，只能在 ovs 中使用�
 具体flow table原理见原教程
 
 ![vlan 网络结构带路由器](https://www.xjimmy.com/wp-content/uploads/image/20180110/1515552229513269.jpg)
-![vlan 网络结构external](../../../../reference/pic/ovs_external.jpg)
+![vlan 网络结构external](../../reference/pic/ovs_external.jpg)
 
 ### vxlan
 
-![vxlan](../../../../reference/pic/ovs_vxlan.jpg)
+![vxlan](../../reference/pic/ovs_vxlan.jpg)

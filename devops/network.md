@@ -371,3 +371,8 @@ JWT是一种token，反而类似于cookie，原因与session出现的理由相�
 
 总结：cookie、session用于浏览器，token、JWT用于客户端。cookie、JWT携带信息，session、token让服务器存储信息，只携带对应的key
 
+### ssh tunnel
+
+可以将远程主机监听localhost的端口暴露到本地主机上，也可以访问只有堡垒机才能访问的端口
+
+[ref](https://iximiuz.com/en/posts/ssh-tunnels/)

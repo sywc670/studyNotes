@@ -645,3 +645,13 @@ block和define十分类似，根据官方文档的解释：block等价于define�
 上下文感知具体指的是根据所处环境css、js、html、url的path、url的query，自动进行不同格式的转义。
 
 {{ $v := or .Site.Language.LanguageCode .Site.Language.Lang }} or用来设置值，如果前一个没有值，就会用后一个设置值，相当于有backup
+
+不要将代码用{{/* */}}注释
+
+#### hugo
+
+template
+
+Use the partial or partialCached function to include one or more partial templates
+
+seq 4 相当于 python的range(1,5)

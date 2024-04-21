@@ -1,5 +1,11 @@
 # docker
 
+### docker pause原理
+
+The docker pause command suspends all processes in the specified containers. On Linux, this uses the cgroups freezer. Traditionally, when suspending a process the SIGSTOP signal is used, which is observable by the process being suspended
+
+[ref](https://docs.docker.com/engine/reference/commandline/pause/)
+
 ### docker destop proxy
 
 先试下可以自动配置clash的代理行不行，不用设置下面的配置
