@@ -376,3 +376,15 @@ JWT是一种token，反而类似于cookie，原因与session出现的理由相�
 可以将远程主机监听localhost的端口暴露到本地主机上，也可以访问只有堡垒机才能访问的端口
 
 [ref](https://iximiuz.com/en/posts/ssh-tunnels/)
+
+### 查询外网出口ip
+
+[ref](https://www.cnblogs.com/nbnode/p/12780875.html)
+
+curl icanhazip.com
+curl ifconfig.me
+curl curlmyip.com
+curl ip.appspot.com
+curl ipinfo.io/ip
+curl ipecho.net/plain
+curl www.trackip.net/i

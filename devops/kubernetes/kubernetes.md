@@ -48,7 +48,7 @@ kubectl apply -k (dir)
 
 [ref](https://iximiuz.com/en/posts/kubernetes-api-structure-and-terminology/#:~:text=Every%20resource%20representation%20follows%20a,representing%20a%20record%20of%20intent.)
 
-![](../../../../reference/pic/k8s-concept.png)
+![](../../reference/pic/k8s-concept.png)
 
 **Summary**:
 - Resource Type: apiserver HTTP endpoint
@@ -90,7 +90,11 @@ kubectl最初方式就是client side apply，自动填充kubectl.kubernetes.io/l
 
 kubectl apply时会判断该对象存不存在，使用patch或者create，也会**根据last-applied-configuration来判断哪些字段是被kubectl管理的**。
 
-![](../../../../reference/pic/csa.png)
+csa的缺点：crd过于长时无法apply
+
+![](../../reference/pic/csa.png)
+
+**server side apply 不会使用last-applied-configuration，将合并的逻辑转移到apiserver去处理，在配置中添加managed-fields**
 
 server side apply示例：
 
@@ -307,3 +311,25 @@ for ns in $(kubectl get ns --no-headers -o=custom-columns=NAME:.metadata.name); 
 
 社区分为两种，安全和不安全的，安全的默认启动，不安全的会影响一个node上所有的pod
 
+### 修改pod时区
+
+设置环境变量TZ=Asia/Shanghai
+
+挂载/etc/localtime
+```
+➜ kubectl create configmap shanghai --from-file=/usr/share/zoneinfo/Asia/Shanghai
+        - name: shanghai
+          mountPath: "/etc/localtime"
+          subPath: "Shanghai"
+      volumes:
+      - name: shanghai
+        configMap:
+          name: shanghai
+```
+
+### nginx ingress controller日志分割问题解决
+
+docker pull blacklabelops/logrotate
+docker pull realz/logrotate
+
+上面两个是容器化之后的logrotate，可以作为sidecar或者ds部署，详情见github

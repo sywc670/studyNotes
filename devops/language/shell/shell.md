@@ -9,6 +9,7 @@
   - [telnet可以测试端口是否开放](#telnet可以测试端口是否开放)
   - [查看CPU使用率高的线程](#查看cpu使用率高的线程)
 - [shell 技巧](#shell-技巧)
+  - [trap wait](#trap-wait)
   - [shell语法坑](#shell语法坑)
   - [变量扩展语法](#变量扩展语法)
   - [文件描述符 重定向](#文件描述符-重定向)
@@ -146,6 +147,17 @@ done
 
 # shell 技巧
 
+## trap wait
+
+例子：
+
+trap "kill $CRONPID; wait $CRONPID" SIGINT SIGTERM
+
+trap捕获SIGINT SIGTERM，类似signal.Notify
+
+wait会等待进程关闭再继续执行
+
+
 ## shell语法坑
 
 shell中变量的值不是是多行字符串，如果是，就会被转换成空格间隔的字符串
@@ -153,6 +165,8 @@ shell中变量的值不是是多行字符串，如果是，就会被转换成空
 ## 变量扩展语法
 
 `readonly`说明MARIADB_USERNAME只能被赋值一次。`${MARIADB_USERNAME:-iam}`使用了Bash shell的**变量扩展语法**，其语法格式为`${待测变量:-默认值}`，表示：如果待测变量不存在或其值为空，则返回默认值，否则返回待测变量的值。
+
+还有一个扩展语法是`${var:?print}`，会在不存在变量时打印错误信息退出
 
 来源：goiam课程
 https://github.com/marmotedu/iam/blob/book/docs/guide/zh-CN/installation/05_%E5%AE%89%E8%A3%85%E5%92%8C%E9%85%8D%E7%BD%AE%E6%95%B0%E6%8D%AE%E5%BA%93.md

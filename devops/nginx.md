@@ -34,7 +34,7 @@ redirect，返回带有 302 代码的临时重定向；如果替换字符串不�
 permanent，返回带有 301 代码的永久重定向
 
 
-#### request_time等字段解析
+#### request_time upstream_response_time等字段解析
 
 [ref](https://blog.csdn.net/zzhongcy/article/details/105819628)
 
@@ -140,3 +140,13 @@ ingress还可以通过挂载configmap来配置nginx.conf，需要进行include�
 ingress controller启动命令可以指定ingressclass，这样即使没有在集群创建ingressclass也可以实现相关功能，**ingressclass只是给ingresscontroller判断哪些ingress是交给自己加载的**，所以可以直接由启动命令来指定
 
 阿里云集群会自动给对应ingress controller生成loadbalancer，而且可以有外网和内网的lb两种
+
+### openssl 加密方式
+
+ssl_ciphers ECDHE-RSA-AES128-GCM-SHA256:ECDHE:ECDH:AES:HIGH:!NULL:!aNULL:!MD5:!ADH:!RC4:!3DES;
+
+这里的后面都可以用下面的命令显示
+
+!3DES 去除DES
+
+openssl ciphers -V 'HIGH:!aNULL:!MD5' # 判断用了哪些协议
