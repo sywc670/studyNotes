@@ -28,6 +28,9 @@ Kubernetes 云原生集群监控主要涉及到如下三类指标：node 物理�
 cAdvisor 是用于监控容器引擎的，由于其监控的实用性，Kubernetes 已经默认将其与 Kubelet 融合，所以我们无需再单独部署 cAdvisor 组件来暴露节点中容器运行的信息，直接使用 Kubelet 组件提供的指标采集地址即可
 
 
+#### prometheus 配置文件改变
+
+相当于把原来的prometheus.yaml给分割了，prometheus这个CR负责全局变量、alertmanager地址这些配置，而prometheusrule是一个CR，相当于一个configmap，scrap_config变成了servicemonitor这个CR
 
 ### relabel机制
 
@@ -69,3 +72,10 @@ service-discovery-with-relabel
 ```
 
 
+### promQL
+
+[ref](https://zhuanlan.zhihu.com/p/477177336)
+
+### kubelet监控指标
+
+[ref](https://blog.csdn.net/sjy8207380/article/details/129048823)

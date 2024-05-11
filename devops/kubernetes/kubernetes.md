@@ -178,6 +178,13 @@ kubectl run -i --tty --image curlimages/curl curl --restart=Never --rm curl web-
 ```shell
 kubectl run kubectl-proxy --image=luksa/kubectl-proxy 
 kubectl exec -it kubectl-proxy -- curl http://127.0.0.1:8001/api/v1/namespaces/default/services
+
+# 在pod中访问
+curl https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}/apis/apps/v1 \
+  --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
+  --header "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"
+
+
 ```
 
 #### DNS查询
