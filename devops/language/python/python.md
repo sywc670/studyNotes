@@ -40,6 +40,10 @@ def f1(a, b, c=0, *args, **kw):
 
 ### flask
 
+gunicorn uvicorn
+
+gunicorn -k uvicorn.workers.UvicornWorker
+
 #### WSGI
 
 [ref](https://segmentfault.com/a/1190000003069785)
@@ -130,3 +134,10 @@ pip install --upgrade pip==20.3.4
 或者找到对应版本的get-pip文件 手动升级。
 wget https://bootstrap.pypa.io/2.7/get-pip.py
 python get-pip.py 
+
+
+### requirements.txt
+
+pip freeze > requirements.txt
+
+pip install -r requirements.txt

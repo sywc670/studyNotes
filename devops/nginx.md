@@ -1,4 +1,4 @@
-# nginx
+### nginx
 
 [一个nginx系列博客](https://blog.csdn.net/zhangyue0503/article/details/131346099?spm=1001.2014.3001.5502)
 
@@ -153,3 +153,9 @@ ssl_ciphers ECDHE-RSA-AES128-GCM-SHA256:ECDHE:ECDH:AES:HIGH:!NULL:!aNULL:!MD5:!A
 !3DES 去除DES
 
 openssl ciphers -V 'HIGH:!aNULL:!MD5' # 判断用了哪些协议
+
+
+### nginx编译参数
+
+./configure --prefix=/gaodun/dist/nginx --user=nginx --group=nginx --with-file-aio --with-http_ssl_module --with-http_realip_module --with-http_addition_module --with-http_xslt_module --with-http_image_filter_module --with-http_sub_module --with-http_dav_module --with-http_flv_module --with-http_mp4_module --with-http_gzip_static_module --with-http_random_index_module --with-http_secure_link_module --with-http_degradation_module --with-http_stub_status_module --with-mail --with-mail_ssl_module --with-debug --with-cc-opt='-O2 -g -pipe -Wall -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector --param=ssp-buffer-size=4 -m64 -mtune=generic' --with-ld-opt=-Wl,-E
+

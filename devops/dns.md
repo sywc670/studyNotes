@@ -1,5 +1,3 @@
-# dns
-
 ### 原理
 
 [ref](https://juejin.cn/post/6844903497494855687)
@@ -23,3 +21,7 @@ SRV record: Using this DNS record type, it's possible to store the IP address an
 
 zone.conf包含各类DNS解析条目，unbound.conf包含对该服务的设置，forward.conf包含stub-zone权威服务器设置和forward-zone转发服务器设置
 
+
+### dig host nslookup
+
+都不会用到/etc/hosts里面的内容
