@@ -1,9 +1,6 @@
-- [informer流程](#informer流程)
-- [参考资料](#参考资料)
-
 ## informer流程
 
-![](../../../../reference/pic/controller.webp)
+![](/reference/pic/controller.webp)
 
 
 1. reflector.ListAndWatch方法调用client-go从apiserver获取和监听对应资源，api对象变化会将该事件以及对应的api对象组合放入Delta FIFO队列中

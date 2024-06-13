@@ -11,17 +11,14 @@
 
 #### uintptr和unsafe.Pointer的区别
 
-unsafe.Pointer只是单纯的通用指针类型，用于转换不同类型指针，它不可以参与指针运算；
+unsafe.Pointer只是单纯的通用指针类型，**用于转换不同类型指针, 不同类型的指针无法直接转换**，它不可以参与指针运算；
 
-而uintptr是用于指针运算的，GC 不把 uintptr 当指针，也就是说 uintptr 无法持有对象， uintptr 类型的目标会被回收；
+而uintptr是用于指针运算的，GC 不把 uintptr 当指针，也就是说 uintptr 无法持有对象， **uintptr 类型的目标会被回收，只是目标会回收**；
 
 unsafe.Pointer 可以和 普通指针 进行相互转换；
 
 unsafe.Pointer 可以和 uintptr 进行相互转换。
 
-#### atomic
-
-原子操作由底层硬件支持，而锁则由操作系统的调度器实现。**锁应当用来保护一段逻辑，对于一个变量更新的保护，原子操作通常会更有效率**，并且更能利用计算机多核的优势，如果要更新的是一个复合对象，则应当使用`atomic.Value`封装好的实现。
 
 #### 多个变量同时赋值
 
@@ -32,50 +29,6 @@ unsafe.Pointer 可以和 uintptr 进行相互转换。
 	// pre = tmp
 	dp[j+1], pre = pre+1, dp[j+1]
 ```
-
-#### sync.Cond
-
-```go
-var done = false
-
-func read(name string, c *sync.Cond) {
-	c.L.Lock()
-	for !done {
-		c.Wait()
-	}
-	fmt.Println(name, "starts reading")
-	c.L.Unlock()
-}
-
-func write(name string, c *sync.Cond) {
-	fmt.Println(name, "starts writing")
-	time.Sleep(time.Second)
-	done = true
-	fmt.Println(name, "wakes all")
-	c.Broadcast()
-}
-
-func main() {
-	cond := sync.NewCond(&sync.Mutex{})
-
-	go read("reader1", cond)
-	go read("reader2", cond)
-	go read("reader3", cond)
-	write("writer", cond)
-
-	time.Sleep(time.Second * 3)
-}
-```
-
-sync.Cond 不能被复制的原因，并不是因为其内部嵌套了 Locker。NewCond 时传入的 Mutex/RWMutex 指针，对于 Mutex 指针复制是没有问题的。
-
-主要原因是 sync.Cond 内部是维护着一个 Goroutine 通知队列 notifyList。如果这个队列被复制的话，那么在并发场景下导致不同 Goroutine 之间操作的 notifyList.wait、notifyList.notify 并不是同一个，这会导致出现有些 Goroutine 会一直阻塞。
-
-实际上 sync.Cond 与 Channel 是有区别的，channel 定位于通信，用于一发一收的场景，sync.Cond 定位于同步，用于一发多收的场景。虽然 channel 可以通过 close 操作来达到一发多收的效果，但是 closed 的 channel 已无法继续使用，而 sync.Cond 依旧可以继续使用。这可能就是“全能”与“专精”的区别。
-
-#### sync.Pool
-
-对于很多需要重复分配、回收内存的地⽅，sync.Pool 是⼀个很好的选择。频繁地分配、回收内存会给 GC 带来⼀定的负担，严重的时候会引起 CPU 的⽑刺，⽽ sync.Pool 可以将暂时不⽤的对象缓存起来，待下次需要的时候直接使⽤，不⽤再次经过内存分配，复⽤对象的内存，减轻 GC 的压⼒，提升系统的性能。
 
 #### struct比较
 
@@ -104,30 +57,6 @@ func Test10(t *testing.T) {
 #### panic recover
 
 一个协程会发生 panic ，导致程序崩溃，但是只会执行自己所在 Goroutine 的延迟函数，所以正好验证了多个 Goroutine 之间没有太多的关联，一个 Goroutine 在 panic 时也不应该执行其他 Goroutine 的延迟函数。
-
-#### 大端 小端
-
-[ref](https://www.ruanyifeng.com/blog/2022/06/endianness-analysis.html)
-
-大端序的最高位在左边，最低位在右边，符合阅读习惯。所以，对于这些国家的人来说，从左到右的大端序的可读性更好。
-
-但是现实中，从右到左的小端序虽然可读性差，但应用更广泛，x86 和 ARM 这两种 CPU 架构都采用小端序，这是为什么？
-
-或者换一种问法，两种不同的字节序为什么会并存，统一规定只使用一种，难道不是更方便吗？
-
-原因是它们有各自的适用场景，某些场景大端序有优势，另一些场景小端序有优势，下面就逐一分析。
-
-**如果需要逐位运算，或者需要到从个位数开始运算，都是小端序占优势。反之，如果运算只涉及到高位，或者数据的可读性比较重要，则是大端序占优势。**
-
-```go
-// 判断是否大端序
-var data int32 = 1
-pointer := unsafe.Pointer(&data)
-bp := (*byte)(pointer)
-if *bp == 1 {
-	fmt.Println(true)
-}
-	```
 
 
 ### 内存管理
@@ -213,7 +142,7 @@ Go 1.3 版本前使用的栈结构是分段栈，随着goroutine 调用的函数
 
 ### GC
 
-可以配合[undergo](/public/series/dev/go/undergo.md#垃圾回收-garbage-collection)
+可以配合[undergo](undergo.md#垃圾回收-garbage-collection)
 
 [ref](https://www.yuque.com/aceld/golang/zhzanb)
 

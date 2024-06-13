@@ -306,6 +306,14 @@ Linux 程序被外界中断时会发送中断信号，程序退出时的状态�
 
 [ref](https://cloud.tencent.com/document/product/362/6734#Linux)
 
+## tmux
+
+[ref](https://www.ruanyifeng.com/blog/2019/10/tmux.html)
+
+在 tmux 中使用鼠标滚轮滚动页面需要先开启 tmux 的鼠标模式。你可以在你的 tmux 配置文件（通常位于 ~/.tmux.conf）中加入以下一行：
+
+set -g mode-mouse on
+
 ## session id 
 
 查看进程各种id：

@@ -1,6 +1,6 @@
 # helm
 
-![](../../../../reference/pic/helm-struct.webp)
+![](/reference/pic/helm-struct.webp)
 
 ### helm安装
 
