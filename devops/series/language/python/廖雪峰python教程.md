@@ -1,5 +1,3 @@
-# python
-
 ### 生成器
 
 yield相当于return，只是每次调用完毕后，下次调用会从yield之后开始执行，直到下一个yield

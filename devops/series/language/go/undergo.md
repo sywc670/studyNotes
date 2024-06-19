@@ -39,7 +39,7 @@
 
 1. new返回指针，而make返回值
 2. make只能用于slice、chan、map这几个类型，new用于创建值类型
-3. make会进行**初始化**（指slice的指针会指向实际内存分配区域），**如果make([]int, 0)，data指针会指向一个空数组`[0]int`，而不是nil，**new不会，只会返回零值对象，如new([]string)返回指向零值slice的指针，其中**slice的data指针为nil，len和cap为0，与var s []int声明类似**
+3. make会进行**初始化**（指slice的指针会指向实际内存分配区域），**如果make([]int, 0)，data指针会指向一个空数组`[0]int`，而不是nil，**new不会，只会**返回零值对象**，如new([]string)返回指向零值slice的指针，其中**slice的data指针为nil，len和cap为0，与var s []int声明类似**
 
 ```go
 ps := new([]string)
